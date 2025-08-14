@@ -1,18 +1,18 @@
 package com.example.oraclejson;
 
+import com.example.oraclejson.dto.JsonData;
+import com.example.oraclejson.dto.TradeDetails;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.SqlParameterValue;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
 import java.nio.charset.StandardCharsets;
 import java.sql.Types;
-import com.example.oraclejson.dto.JsonData;
-import org.springframework.jdbc.core.SqlParameterValue;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,12 +24,17 @@ public class DatabaseStorageService {
     private static final Logger log = LoggerFactory.getLogger(DatabaseStorageService.class);
 
     private final JdbcTemplate jdbcTemplate;
+    private final ObjectMapper objectMapper;
 
     @Value("${app.db.ddl.create-table}")
     private String createTableDdl;
 
-    public DatabaseStorageService(JdbcTemplate jdbcTemplate) {
+    @Value("${app.db.ddl.create-trade-details-table}")
+    private String createTradeDetailsTableDdl;
+
+    public DatabaseStorageService(JdbcTemplate jdbcTemplate, ObjectMapper objectMapper) {
         this.jdbcTemplate = jdbcTemplate;
+        this.objectMapper = objectMapper;
     }
 
     @PostConstruct
@@ -38,7 +43,14 @@ public class DatabaseStorageService {
     }
 
     private void setupTable() {
-        log.info("Setting up table 'json_docs' for JSON storage...");
+        log.info("Setting up tables for JSON storage...");
+        try {
+            log.info("Dropping existing table 'trade_details' (if it exists).");
+            jdbcTemplate.execute("DROP TABLE trade_details");
+        } catch (Exception e) {
+            log.info("Table 'trade_details' did not exist, which is fine.");
+        }
+
         try {
             log.info("Dropping existing table 'json_docs' (if it exists).");
             jdbcTemplate.execute("DROP TABLE json_docs");
@@ -50,6 +62,10 @@ public class DatabaseStorageService {
         log.info("Creating new table 'json_docs'.");
         jdbcTemplate.execute(createTableDdl);
         log.info("Table 'json_docs' created successfully.");
+
+        log.info("Creating new table 'trade_details'.");
+        jdbcTemplate.execute(createTradeDetailsTableDdl);
+        log.info("Table 'trade_details' created successfully.");
     }
 
     public void save(String jsonMessage) {
@@ -60,16 +76,34 @@ public class DatabaseStorageService {
             return;
         }
 
+        // Save raw JSON to json_docs table
         String sql = "INSERT INTO json_docs (message_key, data) VALUES (?, ?)";
-
         String messageKey = UUID.randomUUID().toString();
         byte[] jsonBytes = jsonMessage.getBytes(StandardCharsets.UTF_8);
-
         SqlParameterValue dataParam = new SqlParameterValue(Types.BLOB, jsonBytes);
-
         jdbcTemplate.update(sql, messageKey, dataParam);
-
         log.info("Successfully saved JSON message with key {} to the database.", messageKey);
+
+        // Parse and save to trade_details table
+        try {
+            TradeDetails tradeDetails = objectMapper.readValue(jsonMessage, TradeDetails.class);
+            if (tradeDetails.getClientReferenceNumber() != null) {
+                String sqlTradeDetails = "INSERT INTO trade_details (client_reference_number, fund_number, security_id, trade_date, settle_date, quantity, price, principal, net_amount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                jdbcTemplate.update(sqlTradeDetails,
+                        tradeDetails.getClientReferenceNumber(),
+                        tradeDetails.getFundNumber(),
+                        tradeDetails.getSecurityId(),
+                        tradeDetails.getTradeDate(),
+                        tradeDetails.getSettleDate(),
+                        tradeDetails.getQuantity(),
+                        tradeDetails.getPrice(),
+                        tradeDetails.getPrincipal(),
+                        tradeDetails.getNetAmount());
+                log.info("Successfully extracted and saved trade details for client reference: {}", tradeDetails.getClientReferenceNumber());
+            }
+        } catch (Exception e) {
+            log.error("Failed to parse and save trade details from JSON message: {}", jsonMessage, e);
+        }
     }
 
     public List<JsonData> getDataByDateRange(LocalDateTime startDate, LocalDateTime endDate) {
