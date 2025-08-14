@@ -35,9 +35,39 @@ It uses Spring Boot, Spring Kafka, Spring JDBC (`JdbcTemplate`), and the Oracle 
 
 When you run the application, it will:
 1.  Connect to the Oracle database.
-2.  On first startup, it will drop and recreate the `json_docs` table.
-3.  Connect to the configured Kafka broker.
-4.  Listen for messages on the specified Kafka topic (`app.kafka.topic.json-input`).
-5.  When a message is received, it will save the message content as a new row in the `json_docs` table in the database.
+2.  On first startup, it will drop and recreate the `json_docs` table with `id`, `data`, and `created_at` columns.
+3.  Connect to the configured Kafka broker and listen for messages to store in the database.
+4.  Start a web server on port 8080.
+5.  Expose a REST API endpoint at `GET /api/data` for retrieving stored JSON data.
 
-The application will continue running to listen for new messages. You can stop it with `Ctrl+C`.
+The application will continue running to listen for new messages and serve API requests. You can stop it with `Ctrl+C`.
+
+## Full-Stack Application (with React UI)
+
+This project now includes a React frontend for viewing the data. To run the full application:
+
+### 1. Run the Backend
+
+Follow the instructions in the "How to Run" section above to start the Spring Boot application. The backend will run on `http://localhost:8080`.
+
+### 2. Run the Frontend
+
+1.  Make sure you have Node.js and npm installed.
+2.  Open a new terminal window.
+3.  Navigate to the `frontend` directory:
+    ```bash
+    cd frontend
+    ```
+4.  Install the dependencies:
+    ```bash
+    npm install
+    ```
+5.  Start the React development server:
+    ```bash
+    npm start
+    ```
+    This will open the user interface in your web browser, usually at `http://localhost:3000`.
+
+### 3. Using the UI
+
+The React application will load in your browser. You can use the date and time pickers to select a date range and click "Fetch Data" to see the JSON records stored in the database within that timeframe.

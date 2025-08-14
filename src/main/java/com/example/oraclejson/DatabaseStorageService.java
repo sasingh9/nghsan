@@ -9,7 +9,13 @@ import org.springframework.stereotype.Service;
 import javax.annotation.PostConstruct;
 import java.nio.charset.StandardCharsets;
 import java.sql.Types;
+import com.example.oraclejson.dto.JsonData;
 import org.springframework.jdbc.core.SqlParameterValue;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 public class DatabaseStorageService {
@@ -63,5 +69,30 @@ public class DatabaseStorageService {
         jdbcTemplate.update(sql, param);
 
         log.info("Successfully saved JSON message to the database.");
+    }
+
+    public List<JsonData> getDataByDateRange(LocalDateTime startDate, LocalDateTime endDate) {
+        StringBuilder sql = new StringBuilder("SELECT id, data, created_at FROM json_docs WHERE 1=1");
+        List<Object> params = new ArrayList<>();
+
+        if (startDate != null) {
+            sql.append(" AND created_at >= ?");
+            params.add(startDate);
+        }
+
+        if (endDate != null) {
+            sql.append(" AND created_at <= ?");
+            params.add(endDate);
+        }
+
+        sql.append(" ORDER BY created_at DESC");
+
+        return jdbcTemplate.query(sql.toString(), params.toArray(), (rs, rowNum) -> {
+            long id = rs.getLong("id");
+            byte[] dataBytes = rs.getBytes("data");
+            String jsonData = new String(dataBytes, StandardCharsets.UTF_8);
+            LocalDateTime createdAt = rs.getTimestamp("created_at").toLocalDateTime();
+            return new JsonData(id, jsonData, createdAt);
+        });
     }
 }
