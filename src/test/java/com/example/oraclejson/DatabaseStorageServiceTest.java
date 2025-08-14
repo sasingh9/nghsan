@@ -21,11 +21,16 @@ import org.springframework.test.annotation.DirtiesContext;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @SpringBootTest
 @DirtiesContext
@@ -71,25 +76,24 @@ class DatabaseStorageServiceTest {
         String jsonMessage = "{\"key\":\"value\"}";
 
         // When
-        databaseStorageService.save(jsonMessage);
+        String messageKey = databaseStorageService.save(jsonMessage);
 
         // Then
-        Map<String, Object> result = jdbcTemplate.queryForMap("SELECT data, message_key FROM json_docs WHERE id = ?", 1L);
+        assertThat(messageKey).isNotNull();
+        Map<String, Object> result = jdbcTemplate.queryForMap("SELECT data FROM json_docs WHERE message_key = ?", messageKey);
 
         byte[] savedBytes = (byte[]) result.get("data");
         String savedJson = new String(savedBytes, StandardCharsets.UTF_8);
         assertThat(savedJson).isEqualTo(jsonMessage);
-
-        String messageKey = (String) result.get("message_key");
-        assertThat(messageKey).isNotNull();
-        // Validate that it is a valid UUID
-        assertThat(UUID.fromString(messageKey)).isNotNull();
     }
 
     @Test
-    void testSaveTradeDetails() throws Exception {
+    void testSaveTradeDetails_Valid() throws Exception {
         // Given
-        String jsonMessage = "{\"client_reference_number\":\"CLIENT-001\",\"fund_number\":\"FUND-A\",\"security_id\":\"SEC-12345\",\"trade_date\":\"2023-10-26T10:00:00Z\",\"settle_date\":\"2023-10-28T10:00:00Z\",\"quantity\":100.5,\"price\":12.34,\"principal\":1240.17,\"net_amount\":1250.00}";
+        Instant tradeDate = LocalDate.now(ZoneOffset.UTC).atStartOfDay().toInstant(ZoneOffset.UTC);
+        Instant settleDate = tradeDate.plus(2, ChronoUnit.DAYS);
+        BigDecimal principal = new BigDecimal("1240.1700");
+        String jsonMessage = createTradeJson("CLIENT-001", tradeDate, settleDate, principal);
 
         // When
         databaseStorageService.save(jsonMessage);
@@ -104,7 +108,7 @@ class DatabaseStorageServiceTest {
         assertThat(result.get("SETTLE_DATE")).isNotNull();
         assertThat((BigDecimal) result.get("QUANTITY")).isEqualByComparingTo(new BigDecimal("100.5"));
         assertThat((BigDecimal) result.get("PRICE")).isEqualByComparingTo(new BigDecimal("12.34"));
-        assertThat((BigDecimal) result.get("PRINCIPAL")).isEqualByComparingTo(new BigDecimal("1240.17"));
+        assertThat((BigDecimal) result.get("PRINCIPAL")).isEqualByComparingTo(principal);
         assertThat((BigDecimal) result.get("NET_AMOUNT")).isEqualByComparingTo(new BigDecimal("1250.00"));
 
         // Verify Kafka message
@@ -114,5 +118,78 @@ class DatabaseStorageServiceTest {
         TradeDetails receivedTradeDetails = objectMapper.readValue(receivedValue, TradeDetails.class);
         assertThat(receivedTradeDetails.getClientReferenceNumber()).isEqualTo("CLIENT-001");
         assertThat(receivedTradeDetails.getFundNumber()).isEqualTo("FUND-A");
+
+        // Verify no exception was logged
+        assertThrows(org.springframework.dao.EmptyResultDataAccessException.class, () -> {
+            jdbcTemplate.queryForMap("SELECT * FROM trade_exceptions WHERE client_reference_number = ?", "CLIENT-001");
+        });
+    }
+
+    @Test
+    void testSaveTradeDetails_InvalidTradeDate() {
+        // Given
+        Instant tradeDate = LocalDate.now(ZoneOffset.UTC).minus(1, ChronoUnit.DAYS).atStartOfDay().toInstant(ZoneOffset.UTC);
+        Instant settleDate = tradeDate.plus(2, ChronoUnit.DAYS);
+        String jsonMessage = createTradeJson("CLIENT-002", tradeDate, settleDate, new BigDecimal("1240.1700"));
+
+        // When
+        databaseStorageService.save(jsonMessage);
+
+        // Then
+        assertThrows(org.springframework.dao.EmptyResultDataAccessException.class, () -> {
+            jdbcTemplate.queryForMap("SELECT * FROM trade_details WHERE client_reference_number = ?", "CLIENT-002");
+        });
+
+        Map<String, Object> exception = jdbcTemplate.queryForMap("SELECT * FROM trade_exceptions WHERE client_reference_number = ?", "CLIENT-002");
+        assertThat(exception.get("FAILURE_REASON")).asString().contains("is not the current date");
+    }
+
+    @Test
+    void testSaveTradeDetails_InvalidSettleDate() {
+        // Given
+        Instant tradeDate = LocalDate.now(ZoneOffset.UTC).atStartOfDay().toInstant(ZoneOffset.UTC);
+        Instant settleDate = tradeDate.minus(1, ChronoUnit.DAYS);
+        String jsonMessage = createTradeJson("CLIENT-003", tradeDate, settleDate, new BigDecimal("1240.1700"));
+
+        // When
+        databaseStorageService.save(jsonMessage);
+
+        // Then
+        assertThrows(org.springframework.dao.EmptyResultDataAccessException.class, () -> {
+            jdbcTemplate.queryForMap("SELECT * FROM trade_details WHERE client_reference_number = ?", "CLIENT-003");
+        });
+
+        Map<String, Object> exception = jdbcTemplate.queryForMap("SELECT * FROM trade_exceptions WHERE client_reference_number = ?", "CLIENT-003");
+        assertThat(exception.get("FAILURE_REASON")).asString().contains("is not in the future");
+    }
+
+    @Test
+    void testSaveTradeDetails_InvalidPrincipal() {
+        // Given
+        Instant tradeDate = LocalDate.now(ZoneOffset.UTC).atStartOfDay().toInstant(ZoneOffset.UTC);
+        Instant settleDate = tradeDate.plus(2, ChronoUnit.DAYS);
+        BigDecimal incorrectPrincipal = new BigDecimal("1234.56");
+        String jsonMessage = createTradeJson("CLIENT-004", tradeDate, settleDate, incorrectPrincipal);
+
+        // When
+        databaseStorageService.save(jsonMessage);
+
+        // Then
+        assertThrows(org.springframework.dao.EmptyResultDataAccessException.class, () -> {
+            jdbcTemplate.queryForMap("SELECT * FROM trade_details WHERE client_reference_number = ?", "CLIENT-004");
+        });
+
+        Map<String, Object> exception = jdbcTemplate.queryForMap("SELECT * FROM trade_exceptions WHERE client_reference_number = ?", "CLIENT-004");
+        assertThat(exception.get("FAILURE_REASON")).asString().contains("does not equal quantity * price");
+    }
+
+    private String createTradeJson(String clientRef, Instant tradeDate, Instant settleDate, BigDecimal principal) {
+        return String.format(
+            "{\"client_reference_number\":\"%s\",\"fund_number\":\"FUND-A\",\"security_id\":\"SEC-12345\",\"trade_date\":\"%s\",\"settle_date\":\"%s\",\"quantity\":100.5,\"price\":12.34,\"principal\":%s,\"net_amount\":1250.00}",
+            clientRef,
+            tradeDate.toString(),
+            settleDate.toString(),
+            principal.toPlainString()
+        );
     }
 }

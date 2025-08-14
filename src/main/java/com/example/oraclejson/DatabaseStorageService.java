@@ -12,9 +12,13 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.sql.Types;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -33,6 +37,9 @@ public class DatabaseStorageService {
 
     @Value("${app.db.ddl.create-trade-details-table}")
     private String createTradeDetailsTableDdl;
+
+    @Value("${app.db.ddl.create-trade-exceptions-table}")
+    private String createTradeExceptionsTableDdl;
 
     @Value("${app.kafka.topic.json-output}")
     private String outputTopic;
@@ -72,6 +79,17 @@ public class DatabaseStorageService {
         log.info("Creating new table 'trade_details'.");
         jdbcTemplate.execute(createTradeDetailsTableDdl);
         log.info("Table 'trade_details' created successfully.");
+
+        try {
+            log.info("Dropping existing table 'trade_exceptions' (if it exists).");
+            jdbcTemplate.execute("DROP TABLE trade_exceptions");
+        } catch (Exception e) {
+            log.info("Table 'trade_exceptions' did not exist, which is fine.");
+        }
+
+        log.info("Creating new table 'trade_exceptions'.");
+        jdbcTemplate.execute(createTradeExceptionsTableDdl);
+        log.info("Table 'trade_exceptions' created successfully.");
     }
 
     public String save(String jsonMessage) {
@@ -93,7 +111,16 @@ public class DatabaseStorageService {
         // Parse and save to trade_details table
         try {
             TradeDetails tradeDetails = objectMapper.readValue(jsonMessage, TradeDetails.class);
-            if (tradeDetails.getClientReferenceNumber() != null) {
+
+            if (tradeDetails.getClientReferenceNumber() == null) {
+                log.warn("Trade details has no client reference number, skipping validation and saving.");
+                return messageKey;
+            }
+
+            List<String> validationErrors = validateTradeDetails(tradeDetails);
+
+            if (validationErrors.isEmpty()) {
+                // Save to trade_details table
                 String sqlTradeDetails = "INSERT INTO trade_details (client_reference_number, fund_number, security_id, trade_date, settle_date, quantity, price, principal, net_amount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
                 jdbcTemplate.update(sqlTradeDetails,
                         tradeDetails.getClientReferenceNumber(),
@@ -111,11 +138,64 @@ public class DatabaseStorageService {
                 String tradeDetailsJson = objectMapper.writeValueAsString(tradeDetails);
                 kafkaTemplate.send(outputTopic, tradeDetailsJson);
                 log.info("Successfully published trade details to Kafka topic {}: {}", outputTopic, tradeDetailsJson);
+            } else {
+                saveException(tradeDetails, jsonMessage, validationErrors);
             }
         } catch (Exception e) {
-            log.error("Failed to parse and save trade details from JSON message: {}", jsonMessage, e);
+            log.error("Failed to process trade message: {}", jsonMessage, e);
         }
         return messageKey;
+    }
+
+    private List<String> validateTradeDetails(TradeDetails tradeDetails) {
+        List<String> errors = new ArrayList<>();
+        LocalDate today = LocalDate.now(ZoneOffset.UTC);
+
+        // Rule 1: Trade date must be the current date.
+        if (tradeDetails.getTradeDate() != null) {
+            LocalDate tradeDate = tradeDetails.getTradeDate().toInstant().atZone(ZoneOffset.UTC).toLocalDate();
+            if (!tradeDate.equals(today)) {
+                errors.add("Trade date (" + tradeDate + ") is not the current date (" + today + ").");
+            }
+        } else {
+            errors.add("Trade date is null.");
+        }
+
+        // Rule 2: Settlement date must be in the future.
+        if (tradeDetails.getSettleDate() != null) {
+            LocalDate settleDate = tradeDetails.getSettleDate().toInstant().atZone(ZoneOffset.UTC).toLocalDate();
+            if (!settleDate.isAfter(today)) {
+                errors.add("Settlement date (" + settleDate + ") is not in the future.");
+            }
+        } else {
+            errors.add("Settlement date is null.");
+        }
+
+        // Rule 3: Principal should be equal to quantity multiplied by price.
+        if (tradeDetails.getQuantity() != null && tradeDetails.getPrice() != null && tradeDetails.getPrincipal() != null) {
+            // Use a consistent scale for comparison, based on the database schema.
+            BigDecimal calculatedPrincipal = tradeDetails.getQuantity().multiply(tradeDetails.getPrice()).setScale(4, RoundingMode.HALF_UP);
+            BigDecimal providedPrincipal = tradeDetails.getPrincipal().setScale(4, RoundingMode.HALF_UP);
+
+            if (calculatedPrincipal.compareTo(providedPrincipal) != 0) {
+                errors.add("Principal amount (" + providedPrincipal + ") does not equal quantity * price (" + calculatedPrincipal + ").");
+            }
+        } else {
+            errors.add("Quantity, price, or principal is null.");
+        }
+
+        return errors;
+    }
+
+    private void saveException(TradeDetails tradeDetails, String jsonMessage, List<String> errors) {
+        String failureReason = String.join(", ", errors);
+        log.warn("Saving trade exception for client reference {}. Reason: {}", tradeDetails.getClientReferenceNumber(), failureReason);
+
+        String sql = "INSERT INTO trade_exceptions (client_reference_number, failed_trade_json, failure_reason) VALUES (?, ?, ?)";
+        byte[] jsonBytes = jsonMessage.getBytes(StandardCharsets.UTF_8);
+        SqlParameterValue dataParam = new SqlParameterValue(Types.BLOB, jsonBytes);
+
+        jdbcTemplate.update(sql, tradeDetails.getClientReferenceNumber(), dataParam, failureReason);
     }
 
     public List<JsonData> getDataByDateRange(LocalDateTime startDate, LocalDateTime endDate) {
