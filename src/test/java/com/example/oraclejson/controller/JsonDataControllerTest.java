@@ -11,6 +11,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
@@ -33,7 +34,8 @@ class JsonDataControllerTest {
     void whenGetDataWithDateRange_thenReturnJsonArray() throws Exception {
         // Given
         LocalDateTime now = LocalDateTime.now();
-        JsonData jsonData = new JsonData(1L, "{\"test\":\"data\"}", now);
+        String key = UUID.randomUUID().toString();
+        JsonData jsonData = new JsonData(1L, key, "{\"test\":\"data\"}", now);
         List<JsonData> allData = Collections.singletonList(jsonData);
 
         given(databaseStorageService.getDataByDateRange(any(), any())).willReturn(allData);
@@ -48,6 +50,7 @@ class JsonDataControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].id", is(1)))
+                .andExpect(jsonPath("$[0].messageKey", is(key)))
                 .andExpect(jsonPath("$[0].jsonData", is("{\"test\":\"data\"}")));
     }
 
@@ -55,7 +58,8 @@ class JsonDataControllerTest {
     void whenGetDataWithNoParams_thenReturnJsonArray() throws Exception {
         // Given
         LocalDateTime now = LocalDateTime.now();
-        JsonData jsonData = new JsonData(1L, "{\"test\":\"data\"}", now);
+        String key = UUID.randomUUID().toString();
+        JsonData jsonData = new JsonData(1L, key, "{\"test\":\"data\"}", now);
         List<JsonData> allData = Collections.singletonList(jsonData);
 
         given(databaseStorageService.getDataByDateRange(null, null)).willReturn(allData);

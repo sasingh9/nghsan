@@ -7,6 +7,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.annotation.DirtiesContext;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -29,9 +31,15 @@ class DatabaseStorageServiceTest {
         databaseStorageService.save(jsonMessage);
 
         // Then
-        byte[] savedBytes = jdbcTemplate.queryForObject("SELECT data FROM json_docs WHERE id = ?", byte[].class, 1L);
-        String savedJson = new String(savedBytes, StandardCharsets.UTF_8);
+        Map<String, Object> result = jdbcTemplate.queryForMap("SELECT data, message_key FROM json_docs WHERE id = ?", 1L);
 
+        byte[] savedBytes = (byte[]) result.get("data");
+        String savedJson = new String(savedBytes, StandardCharsets.UTF_8);
         assertThat(savedJson).isEqualTo(jsonMessage);
+
+        String messageKey = (String) result.get("message_key");
+        assertThat(messageKey).isNotNull();
+        // Validate that it is a valid UUID
+        assertThat(UUID.fromString(messageKey)).isNotNull();
     }
 }

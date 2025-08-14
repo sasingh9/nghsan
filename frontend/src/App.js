@@ -69,7 +69,8 @@ function App() {
                         data.map((item) => (
                             <div key={item.id} className="data-item">
                                 <h3>Record ID: {item.id}</h3>
-                                <p>Created At: {new Date(item.createdAt).toLocaleString()}</p>
+                                <p><strong>Message Key:</strong> {item.messageKey}</p>
+                                <p><strong>Created At:</strong> {new Date(item.createdAt).toLocaleString()}</p>
                                 <pre>{JSON.stringify(JSON.parse(item.jsonData), null, 2)}</pre>
                             </div>
                         ))

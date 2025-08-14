@@ -16,6 +16,7 @@ import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class DatabaseStorageService {
@@ -54,25 +55,25 @@ public class DatabaseStorageService {
     public void save(String jsonMessage) {
         log.info("Saving JSON message to the database...");
 
-        // A simple validation to ensure the string is not empty
         if (jsonMessage == null || jsonMessage.trim().isEmpty()) {
             log.warn("Received an empty or null message, not saving.");
             return;
         }
 
-        String sql = "INSERT INTO json_docs (data) VALUES (?)";
+        String sql = "INSERT INTO json_docs (message_key, data) VALUES (?, ?)";
 
+        String messageKey = UUID.randomUUID().toString();
         byte[] jsonBytes = jsonMessage.getBytes(StandardCharsets.UTF_8);
 
-        // Use SqlParameterValue to specify the SQL type for the BLOB
-        SqlParameterValue param = new SqlParameterValue(Types.BLOB, jsonBytes);
-        jdbcTemplate.update(sql, param);
+        SqlParameterValue dataParam = new SqlParameterValue(Types.BLOB, jsonBytes);
 
-        log.info("Successfully saved JSON message to the database.");
+        jdbcTemplate.update(sql, messageKey, dataParam);
+
+        log.info("Successfully saved JSON message with key {} to the database.", messageKey);
     }
 
     public List<JsonData> getDataByDateRange(LocalDateTime startDate, LocalDateTime endDate) {
-        StringBuilder sql = new StringBuilder("SELECT id, data, created_at FROM json_docs WHERE 1=1");
+        StringBuilder sql = new StringBuilder("SELECT id, message_key, data, created_at FROM json_docs WHERE 1=1");
         List<Object> params = new ArrayList<>();
 
         if (startDate != null) {
@@ -89,10 +90,11 @@ public class DatabaseStorageService {
 
         return jdbcTemplate.query(sql.toString(), params.toArray(), (rs, rowNum) -> {
             long id = rs.getLong("id");
+            String messageKey = rs.getString("message_key");
             byte[] dataBytes = rs.getBytes("data");
             String jsonData = new String(dataBytes, StandardCharsets.UTF_8);
             LocalDateTime createdAt = rs.getTimestamp("created_at").toLocalDateTime();
-            return new JsonData(id, jsonData, createdAt);
+            return new JsonData(id, messageKey, jsonData, createdAt);
         });
     }
 }
