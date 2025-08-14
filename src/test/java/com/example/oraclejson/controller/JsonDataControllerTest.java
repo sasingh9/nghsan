@@ -3,6 +3,7 @@ package com.example.oraclejson.controller;
 import com.example.oraclejson.DatabaseStorageService;
 import com.example.oraclejson.dto.JsonData;
 import com.example.oraclejson.dto.TradeDetails;
+import com.example.oraclejson.dto.TradeExceptionData;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -92,5 +93,24 @@ class JsonDataControllerTest {
                 .andExpect(jsonPath("$[0].fund_number", is("FUND-A")))
                 .andExpect(jsonPath("$[0].security_id", is("SEC-12345")))
                 .andExpect(jsonPath("$[0].quantity", is(100.5)));
+    }
+
+    @Test
+    void whenGetExceptionsByClientReference_thenReturnJsonArray() throws Exception {
+        // Given
+        LocalDateTime now = LocalDateTime.now();
+        TradeExceptionData exceptionData = new TradeExceptionData(1L, "CLIENT-001", "{\"bad\":\"data\"}", "Invalid trade date", now);
+        List<TradeExceptionData> allExceptions = Collections.singletonList(exceptionData);
+
+        given(databaseStorageService.getTradeExceptionsByClientReference("CLIENT-001")).willReturn(allExceptions);
+
+        // When & Then
+        mockMvc.perform(get("/api/exceptions/CLIENT-001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].id", is(1)))
+                .andExpect(jsonPath("$[0].clientReferenceNumber", is("CLIENT-001")))
+                .andExpect(jsonPath("$[0].failedTradeJson", is("{\"bad\":\"data\"}")))
+                .andExpect(jsonPath("$[0].failureReason", is("Invalid trade date")));
     }
 }

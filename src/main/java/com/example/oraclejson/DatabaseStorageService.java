@@ -2,6 +2,7 @@ package com.example.oraclejson;
 
 import com.example.oraclejson.dto.JsonData;
 import com.example.oraclejson.dto.TradeDetails;
+import com.example.oraclejson.dto.TradeExceptionData;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -238,6 +239,19 @@ public class DatabaseStorageService {
             trade.setPrincipal(rs.getBigDecimal("principal"));
             trade.setNetAmount(rs.getBigDecimal("net_amount"));
             return trade;
+        }, clientReferenceNumber);
+    }
+
+    public List<TradeExceptionData> getTradeExceptionsByClientReference(String clientReferenceNumber) {
+        String sql = "SELECT * FROM trade_exceptions WHERE client_reference_number = ?";
+        return jdbcTemplate.query(sql, (rs, rowNum) -> {
+            long id = rs.getLong("id");
+            String ref = rs.getString("client_reference_number");
+            byte[] jsonBytes = rs.getBytes("failed_trade_json");
+            String failedJson = new String(jsonBytes, StandardCharsets.UTF_8);
+            String reason = rs.getString("failure_reason");
+            LocalDateTime createdAt = rs.getTimestamp("created_at").toLocalDateTime();
+            return new TradeExceptionData(id, ref, failedJson, reason, createdAt);
         }, clientReferenceNumber);
     }
 }

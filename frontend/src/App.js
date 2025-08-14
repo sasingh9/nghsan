@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import './App.css';
 import TradeInquiry from './components/TradeInquiry';
+import TradeExceptionInquiry from './components/TradeExceptionInquiry';
 
 function App() {
     const [startDate, setStartDate] = useState('');
@@ -83,6 +84,10 @@ function App() {
                 <hr style={{ margin: '2rem 0' }} />
 
                 <TradeInquiry />
+
+                <hr style={{ margin: '2rem 0' }} />
+
+                <TradeExceptionInquiry />
             </main>
         </div>
     );

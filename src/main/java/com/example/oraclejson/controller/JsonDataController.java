@@ -3,6 +3,7 @@ package com.example.oraclejson.controller;
 import com.example.oraclejson.DatabaseStorageService;
 import com.example.oraclejson.dto.JsonData;
 import com.example.oraclejson.dto.TradeDetails;
+import com.example.oraclejson.dto.TradeExceptionData;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -59,5 +60,10 @@ public class JsonDataController {
             // Log the exception details
             return ResponseEntity.status(500).body("Error saving data: " + e.getMessage());
         }
+    }
+
+    @GetMapping("/exceptions/{clientReferenceNumber}")
+    public List<TradeExceptionData> getExceptionsByClientReference(@PathVariable String clientReferenceNumber) {
+        return storageService.getTradeExceptionsByClientReference(clientReferenceNumber);
     }
 }
