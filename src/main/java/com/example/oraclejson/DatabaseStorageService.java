@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.SqlParameterValue;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
@@ -25,6 +26,7 @@ public class DatabaseStorageService {
 
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
+    private final KafkaTemplate<String, String> kafkaTemplate;
 
     @Value("${app.db.ddl.create-table}")
     private String createTableDdl;
@@ -32,9 +34,13 @@ public class DatabaseStorageService {
     @Value("${app.db.ddl.create-trade-details-table}")
     private String createTradeDetailsTableDdl;
 
-    public DatabaseStorageService(JdbcTemplate jdbcTemplate, ObjectMapper objectMapper) {
+    @Value("${app.kafka.topic.json-output}")
+    private String outputTopic;
+
+    public DatabaseStorageService(JdbcTemplate jdbcTemplate, ObjectMapper objectMapper, KafkaTemplate<String, String> kafkaTemplate) {
         this.jdbcTemplate = jdbcTemplate;
         this.objectMapper = objectMapper;
+        this.kafkaTemplate = kafkaTemplate;
     }
 
     @PostConstruct
@@ -100,6 +106,11 @@ public class DatabaseStorageService {
                         tradeDetails.getPrincipal(),
                         tradeDetails.getNetAmount());
                 log.info("Successfully extracted and saved trade details for client reference: {}", tradeDetails.getClientReferenceNumber());
+
+                // Publish trade details to Kafka
+                String tradeDetailsJson = objectMapper.writeValueAsString(tradeDetails);
+                kafkaTemplate.send(outputTopic, tradeDetailsJson);
+                log.info("Successfully published trade details to Kafka topic {}: {}", outputTopic, tradeDetailsJson);
             }
         } catch (Exception e) {
             log.error("Failed to parse and save trade details from JSON message: {}", jsonMessage, e);
