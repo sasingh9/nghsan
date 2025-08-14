@@ -6,6 +6,7 @@ import com.example.oraclejson.dto.TradeDetails;
 import com.example.oraclejson.dto.TradeExceptionData;
 import com.example.oraclejson.repository.AppUserRepository;
 import com.example.oraclejson.repository.UserFundEntitlementRepository;
+import com.example.oraclejson.service.UniqueIdGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.context.annotation.Profile;
 import org.slf4j.Logger;
@@ -38,6 +39,7 @@ public class DatabaseStorageService {
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final AppUserRepository appUserRepository;
     private final UserFundEntitlementRepository userFundEntitlementRepository;
+    private final UniqueIdGenerator uniqueIdGenerator;
 
     @Value("${app.db.ddl.create-table}")
     private String createTableDdl;
@@ -57,12 +59,13 @@ public class DatabaseStorageService {
     @Value("${app.kafka.topic.json-output}")
     private String outputTopic;
 
-    public DatabaseStorageService(JdbcTemplate jdbcTemplate, ObjectMapper objectMapper, KafkaTemplate<String, String> kafkaTemplate, AppUserRepository appUserRepository, UserFundEntitlementRepository userFundEntitlementRepository) {
+    public DatabaseStorageService(JdbcTemplate jdbcTemplate, ObjectMapper objectMapper, KafkaTemplate<String, String> kafkaTemplate, AppUserRepository appUserRepository, UserFundEntitlementRepository userFundEntitlementRepository, UniqueIdGenerator uniqueIdGenerator) {
         this.jdbcTemplate = jdbcTemplate;
         this.objectMapper = objectMapper;
         this.kafkaTemplate = kafkaTemplate;
         this.appUserRepository = appUserRepository;
         this.userFundEntitlementRepository = userFundEntitlementRepository;
+        this.uniqueIdGenerator = uniqueIdGenerator;
     }
 
     @PostConstruct
@@ -139,7 +142,7 @@ public class DatabaseStorageService {
 
         // Save raw JSON to json_docs table
         String sql = "INSERT INTO json_docs (message_key, data) VALUES (?, ?)";
-        String messageKey = UUID.randomUUID().toString();
+        String messageKey = uniqueIdGenerator.generateUniqueId();
         byte[] jsonBytes = jsonMessage.getBytes(StandardCharsets.UTF_8);
         SqlParameterValue dataParam = new SqlParameterValue(Types.BLOB, jsonBytes);
         jdbcTemplate.update(sql, messageKey, dataParam);
