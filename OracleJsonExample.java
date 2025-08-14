@@ -4,15 +4,18 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.nio.charset.StandardCharsets;
 
 import oracle.sql.json.OracleJsonFactory;
 import oracle.sql.json.OracleJsonObject;
 
 /*
- * This script demonstrates how to store and retrieve JSON documents in an Oracle 23ai database.
+ * This script demonstrates how to store and retrieve JSON documents in an Oracle 19c or later database.
+ * For Oracle 21c and later, you can use the native JSON data type. For Oracle 19c, JSON is stored in a BLOB column with a check constraint
+ * to avoid character set conversion issues.
  *
  * Pre-requisites:
- * 1. Oracle 23ai Database instance.
+ * 1. Oracle Database instance (19c or later).
  * 2. Oracle JDBC driver (ojdbc11.jar or later) in the classpath.
  *
  * How to compile and run:
@@ -63,8 +66,8 @@ public class OracleJsonExample {
                 }
             }
 
-            // Create a table with a JSON column
-            statement.execute("CREATE TABLE json_docs (id NUMBER PRIMARY KEY, data JSON)");
+            // Create a table with a BLOB column to store JSON, with a check constraint to ensure it's valid JSON
+            statement.execute("CREATE TABLE json_docs (id NUMBER PRIMARY KEY, data BLOB CHECK (data IS JSON))");
             System.out.println("Created table json_docs.");
 
             // Create a JSON object
@@ -78,7 +81,7 @@ public class OracleJsonExample {
             String sql = "INSERT INTO json_docs (id, data) VALUES (?, ?)";
             try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
                 preparedStatement.setInt(1, 1);
-                preparedStatement.setObject(2, jsonObject);
+                preparedStatement.setBytes(2, jsonObject.toString().getBytes(StandardCharsets.UTF_8));
                 preparedStatement.executeUpdate();
                 System.out.println("Inserted JSON document into json_docs table.");
             }
@@ -90,9 +93,10 @@ public class OracleJsonExample {
         try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 if (resultSet.next()) {
-                    OracleJsonObject retrievedJson = resultSet.getObject(1, OracleJsonObject.class);
+                    byte[] retrievedBytes = resultSet.getBytes(1);
+                    String retrievedJson = new String(retrievedBytes, StandardCharsets.UTF_8);
                     System.out.println("\nRetrieved JSON document from database:");
-                    System.out.println(retrievedJson.toString());
+                    System.out.println(retrievedJson);
                 }
             }
         }
