@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import './App.css';
+import TradeInquiry from './components/TradeInquiry';
 
 function App() {
     const [startDate, setStartDate] = useState('');
@@ -78,6 +79,10 @@ function App() {
                         <p>{!loading && 'No data to display. Adjust the filter and click "Fetch Data".'}</p>
                     )}
                 </div>
+
+                <hr style={{ margin: '2rem 0' }} />
+
+                <TradeInquiry />
             </main>
         </div>
     );

@@ -2,6 +2,8 @@ package com.example.oraclejson.controller;
 
 import com.example.oraclejson.DatabaseStorageService;
 import com.example.oraclejson.dto.JsonData;
+import com.example.oraclejson.dto.TradeDetails;
+import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -68,5 +70,27 @@ class JsonDataControllerTest {
         mockMvc.perform(get("/api/data"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)));
+    }
+
+    @Test
+    void whenGetTradesByClientReference_thenReturnJsonArray() throws Exception {
+        // Given
+        TradeDetails tradeDetails = new TradeDetails();
+        tradeDetails.setClientReferenceNumber("CLIENT-001");
+        tradeDetails.setFundNumber("FUND-A");
+        tradeDetails.setSecurityId("SEC-12345");
+        tradeDetails.setQuantity(new BigDecimal("100.5"));
+        List<TradeDetails> tradeDetailsList = Collections.singletonList(tradeDetails);
+
+        given(databaseStorageService.getTradeDetailsByClientReference("CLIENT-001")).willReturn(tradeDetailsList);
+
+        // When & Then
+        mockMvc.perform(get("/api/trades/CLIENT-001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].client_reference_number", is("CLIENT-001")))
+                .andExpect(jsonPath("$[0].fund_number", is("FUND-A")))
+                .andExpect(jsonPath("$[0].security_id", is("SEC-12345")))
+                .andExpect(jsonPath("$[0].quantity", is(100.5)));
     }
 }

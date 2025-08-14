@@ -74,12 +74,12 @@ public class DatabaseStorageService {
         log.info("Table 'trade_details' created successfully.");
     }
 
-    public void save(String jsonMessage) {
+    public String save(String jsonMessage) {
         log.info("Saving JSON message to the database...");
 
         if (jsonMessage == null || jsonMessage.trim().isEmpty()) {
             log.warn("Received an empty or null message, not saving.");
-            return;
+            return null;
         }
 
         // Save raw JSON to json_docs table
@@ -115,6 +115,7 @@ public class DatabaseStorageService {
         } catch (Exception e) {
             log.error("Failed to parse and save trade details from JSON message: {}", jsonMessage, e);
         }
+        return messageKey;
     }
 
     public List<JsonData> getDataByDateRange(LocalDateTime startDate, LocalDateTime endDate) {
@@ -141,5 +142,22 @@ public class DatabaseStorageService {
             LocalDateTime createdAt = rs.getTimestamp("created_at").toLocalDateTime();
             return new JsonData(id, messageKey, jsonData, createdAt);
         });
+    }
+
+    public List<TradeDetails> getTradeDetailsByClientReference(String clientReferenceNumber) {
+        String sql = "SELECT * FROM trade_details WHERE client_reference_number = ?";
+        return jdbcTemplate.query(sql, (rs, rowNum) -> {
+            TradeDetails trade = new TradeDetails();
+            trade.setClientReferenceNumber(rs.getString("client_reference_number"));
+            trade.setFundNumber(rs.getString("fund_number"));
+            trade.setSecurityId(rs.getString("security_id"));
+            trade.setTradeDate(rs.getDate("trade_date"));
+            trade.setSettleDate(rs.getDate("settle_date"));
+            trade.setQuantity(rs.getBigDecimal("quantity"));
+            trade.setPrice(rs.getBigDecimal("price"));
+            trade.setPrincipal(rs.getBigDecimal("principal"));
+            trade.setNetAmount(rs.getBigDecimal("net_amount"));
+            return trade;
+        }, clientReferenceNumber);
     }
 }
