@@ -7,16 +7,18 @@ public class TradeExceptionData {
     private String clientReferenceNumber;
     private String failedTradeJson;
     private String failureReason;
+    private ErrorType errorType;
     private LocalDateTime createdAt;
 
     public TradeExceptionData() {
     }
 
-    public TradeExceptionData(long id, String clientReferenceNumber, String failedTradeJson, String failureReason, LocalDateTime createdAt) {
+    public TradeExceptionData(long id, String clientReferenceNumber, String failedTradeJson, String failureReason, ErrorType errorType, LocalDateTime createdAt) {
         this.id = id;
         this.clientReferenceNumber = clientReferenceNumber;
         this.failedTradeJson = failedTradeJson;
         this.failureReason = failureReason;
+        this.errorType = errorType;
         this.createdAt = createdAt;
     }
 
@@ -51,6 +53,14 @@ public class TradeExceptionData {
 
     public void setFailureReason(String failureReason) {
         this.failureReason = failureReason;
+    }
+
+    public ErrorType getErrorType() {
+        return errorType;
+    }
+
+    public void setErrorType(ErrorType errorType) {
+        this.errorType = errorType;
     }
 
     public LocalDateTime getCreatedAt() {

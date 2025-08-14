@@ -1,6 +1,7 @@
 package com.example.oraclejson.controller;
 
 import com.example.oraclejson.DatabaseStorageService;
+import com.example.oraclejson.dto.ErrorType;
 import com.example.oraclejson.dto.JsonData;
 import com.example.oraclejson.dto.TradeDetails;
 import com.example.oraclejson.dto.TradeExceptionData;
@@ -99,7 +100,7 @@ class JsonDataControllerTest {
     void whenGetExceptionsByClientReference_thenReturnJsonArray() throws Exception {
         // Given
         LocalDateTime now = LocalDateTime.now();
-        TradeExceptionData exceptionData = new TradeExceptionData(1L, "CLIENT-001", "{\"bad\":\"data\"}", "Invalid trade date", now);
+        TradeExceptionData exceptionData = new TradeExceptionData(1L, "CLIENT-001", "{\"bad\":\"data\"}", "Invalid trade date", ErrorType.BUSINESS, now);
         List<TradeExceptionData> allExceptions = Collections.singletonList(exceptionData);
 
         given(databaseStorageService.getTradeExceptionsByClientReference("CLIENT-001")).willReturn(allExceptions);
@@ -111,6 +112,7 @@ class JsonDataControllerTest {
                 .andExpect(jsonPath("$[0].id", is(1)))
                 .andExpect(jsonPath("$[0].clientReferenceNumber", is("CLIENT-001")))
                 .andExpect(jsonPath("$[0].failedTradeJson", is("{\"bad\":\"data\"}")))
-                .andExpect(jsonPath("$[0].failureReason", is("Invalid trade date")));
+                .andExpect(jsonPath("$[0].failureReason", is("Invalid trade date")))
+                .andExpect(jsonPath("$[0].errorType", is(ErrorType.BUSINESS.name())));
     }
 }

@@ -1,9 +1,11 @@
 package com.example.oraclejson;
 
+import com.example.oraclejson.dto.ErrorType;
 import com.example.oraclejson.dto.JsonData;
 import com.example.oraclejson.dto.TradeDetails;
 import com.example.oraclejson.dto.TradeExceptionData;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.context.annotation.Profile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -52,7 +54,9 @@ public class DatabaseStorageService {
     }
 
     @PostConstruct
+    @Profile("!prod")
     public void init() {
+        log.warn("<<<<<< EXECUTING DESTRUCTIVE DATABASE SETUP. THIS SHOULD NOT RUN IN A PRODUCTION ENVIRONMENT. >>>>>>");
         setupTable();
     }
 
@@ -118,6 +122,11 @@ public class DatabaseStorageService {
                 return messageKey;
             }
 
+            if (isDuplicate(tradeDetails.getClientReferenceNumber())) {
+                log.warn("Duplicate trade detected with client reference number: {}. Skipping processing.", tradeDetails.getClientReferenceNumber());
+                return messageKey;
+            }
+
             List<String> validationErrors = validateTradeDetails(tradeDetails);
 
             if (validationErrors.isEmpty()) {
@@ -143,9 +152,24 @@ public class DatabaseStorageService {
                 saveException(tradeDetails, jsonMessage, validationErrors);
             }
         } catch (Exception e) {
-            log.error("Failed to process trade message: {}", jsonMessage, e);
+            saveTechnicalException(jsonMessage, e);
         }
         return messageKey;
+    }
+
+    private boolean isDuplicate(String clientReferenceNumber) {
+        if (clientReferenceNumber == null || clientReferenceNumber.trim().isEmpty()) {
+            // Cannot be a duplicate if it has no reference number.
+            return false;
+        }
+
+        String sqlTradeDetails = "SELECT COUNT(*) FROM trade_details WHERE client_reference_number = ?";
+        Integer tradeCount = jdbcTemplate.queryForObject(sqlTradeDetails, new Object[]{clientReferenceNumber}, Integer.class);
+
+        String sqlTradeExceptions = "SELECT COUNT(*) FROM trade_exceptions WHERE client_reference_number = ?";
+        Integer exceptionCount = jdbcTemplate.queryForObject(sqlTradeExceptions, new Object[]{clientReferenceNumber}, Integer.class);
+
+        return (tradeCount != null && tradeCount > 0) || (exceptionCount != null && exceptionCount > 0);
     }
 
     private List<String> validateTradeDetails(TradeDetails tradeDetails) {
@@ -189,14 +213,39 @@ public class DatabaseStorageService {
     }
 
     private void saveException(TradeDetails tradeDetails, String jsonMessage, List<String> errors) {
-        String failureReason = String.join(", ", errors);
-        log.warn("Saving trade exception for client reference {}. Reason: {}", tradeDetails.getClientReferenceNumber(), failureReason);
+        try {
+            String failureReason = String.join(", ", errors);
+            log.warn("Saving business exception for client reference {}. Reason: {}", tradeDetails.getClientReferenceNumber(), failureReason);
 
-        String sql = "INSERT INTO trade_exceptions (client_reference_number, failed_trade_json, failure_reason) VALUES (?, ?, ?)";
-        byte[] jsonBytes = jsonMessage.getBytes(StandardCharsets.UTF_8);
-        SqlParameterValue dataParam = new SqlParameterValue(Types.BLOB, jsonBytes);
+            String sql = "INSERT INTO trade_exceptions (client_reference_number, error_type, failed_trade_json, failure_reason) VALUES (?, ?, ?, ?)";
+            byte[] jsonBytes = jsonMessage.getBytes(StandardCharsets.UTF_8);
+            SqlParameterValue dataParam = new SqlParameterValue(Types.BLOB, jsonBytes);
 
-        jdbcTemplate.update(sql, tradeDetails.getClientReferenceNumber(), dataParam, failureReason);
+            jdbcTemplate.update(sql, tradeDetails.getClientReferenceNumber(), ErrorType.BUSINESS.name(), dataParam, failureReason);
+        } catch (Exception e) {
+            log.error("CRITICAL: Failed to save business exception to the database. Client Reference: {}. Reason: {}. Original message: {}",
+                    tradeDetails.getClientReferenceNumber(), errors, jsonMessage, e);
+        }
+    }
+
+    private void saveTechnicalException(String jsonMessage, Exception originalException) {
+        try {
+            log.error("Saving technical exception for trade message: {}", jsonMessage, originalException);
+            String failureReason = originalException.getClass().getSimpleName() + ": " + originalException.getMessage();
+            if (failureReason.length() > 1000) {
+                failureReason = failureReason.substring(0, 997) + "...";
+            }
+
+            String sql = "INSERT INTO trade_exceptions (client_reference_number, error_type, failed_trade_json, failure_reason) VALUES (?, ?, ?, ?)";
+            byte[] jsonBytes = jsonMessage.getBytes(StandardCharsets.UTF_8);
+            SqlParameterValue dataParam = new SqlParameterValue(Types.BLOB, jsonBytes);
+
+            // For technical errors, client_reference_number may not be available. Storing as null.
+            jdbcTemplate.update(sql, null, ErrorType.TECHNICAL.name(), dataParam, failureReason);
+        } catch (Exception dbException) {
+            log.error("CRITICAL: Failed to save technical exception to the database. The original error was: {}. Original message: {}",
+                    originalException.getMessage(), jsonMessage, dbException);
+        }
     }
 
     public List<JsonData> getDataByDateRange(LocalDateTime startDate, LocalDateTime endDate) {
@@ -250,8 +299,9 @@ public class DatabaseStorageService {
             byte[] jsonBytes = rs.getBytes("failed_trade_json");
             String failedJson = new String(jsonBytes, StandardCharsets.UTF_8);
             String reason = rs.getString("failure_reason");
+            ErrorType errorType = ErrorType.valueOf(rs.getString("error_type"));
             LocalDateTime createdAt = rs.getTimestamp("created_at").toLocalDateTime();
-            return new TradeExceptionData(id, ref, failedJson, reason, createdAt);
+            return new TradeExceptionData(id, ref, failedJson, reason, errorType, createdAt);
         }, clientReferenceNumber);
     }
 }
