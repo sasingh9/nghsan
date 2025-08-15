@@ -3,6 +3,7 @@ package com.example.oraclejson.controller;
 import com.example.oraclejson.DatabaseStorageService;
 import com.example.oraclejson.dto.JsonData;
 import com.example.oraclejson.dto.TradeDetails;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.example.oraclejson.dto.TradeExceptionData;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -55,6 +56,8 @@ public class JsonDataController {
             } else {
                 return ResponseEntity.badRequest().body("Could not save empty or null data.");
             }
+        } catch (JsonProcessingException e) {
+            return ResponseEntity.badRequest().body("Invalid JSON format: " + e.getMessage());
         } catch (Exception e) {
             // Log the exception details
             return ResponseEntity.status(500).body("Error saving data: " + e.getMessage());

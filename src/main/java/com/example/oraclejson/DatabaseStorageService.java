@@ -7,6 +7,7 @@ import com.example.oraclejson.dto.TradeExceptionData;
 import com.example.oraclejson.repository.AppUserRepository;
 import com.example.oraclejson.repository.UserFundEntitlementRepository;
 import com.example.oraclejson.service.UniqueIdGenerator;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.context.annotation.Profile;
 import org.slf4j.Logger;
@@ -26,8 +27,12 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
+
+import com.example.oraclejson.entity.UserFundEntitlement;
 
 @Service
 public class DatabaseStorageService {
@@ -49,6 +54,18 @@ public class DatabaseStorageService {
 
     @Value("${app.db.ddl.create-trade-exceptions-table}")
     private String createTradeExceptionsTableDdl;
+
+    @Value("${app.db.ddl.create-json-docs-index}")
+    private String createJsonDocsIndexDdl;
+
+    @Value("${app.db.ddl.create-trade-details-client-ref-index}")
+    private String createTradeDetailsClientRefIndexDdl;
+
+    @Value("${app.db.ddl.create-trade-exceptions-client-ref-index}")
+    private String createTradeExceptionsClientRefIndexDdl;
+
+    @Value("${app.db.ddl.create-trade-details-created-at-index}")
+    private String createTradeDetailsCreatedAtİndexDdl;
 
     @Value("${app.db.ddl.create-user-table}")
     private String createUserTableDdl;
@@ -115,13 +132,29 @@ public class DatabaseStorageService {
         jdbcTemplate.execute(createTableDdl);
         log.info("Table 'json_docs' created successfully.");
 
+        log.info("Creating index on 'json_docs.created_at'.");
+        jdbcTemplate.execute(createJsonDocsIndexDdl);
+        log.info("Index 'idx_json_docs_created_at' created successfully.");
+
         log.info("Creating new table 'trade_details'.");
         jdbcTemplate.execute(createTradeDetailsTableDdl);
         log.info("Table 'trade_details' created successfully.");
 
+        log.info("Creating index on 'trade_details.client_reference_number'.");
+        jdbcTemplate.execute(createTradeDetailsClientRefIndexDdl);
+        log.info("Index 'idx_trade_details_client_ref' created successfully.");
+
+        log.info("Creating index on 'trade_details.created_at'.");
+        jdbcTemplate.execute(createTradeDetailsCreatedAtİndexDdl);
+        log.info("Index 'idx_trade_details_created_at' created successfully.");
+
         log.info("Creating new table 'trade_exceptions'.");
         jdbcTemplate.execute(createTradeExceptionsTableDdl);
         log.info("Table 'trade_exceptions' created successfully.");
+
+        log.info("Creating index on 'trade_exceptions.client_reference_number'.");
+        jdbcTemplate.execute(createTradeExceptionsClientRefIndexDdl);
+        log.info("Index 'idx_trade_ex_client_ref' created successfully.");
 
         log.info("Creating new table 'app_user'.");
         jdbcTemplate.execute(createUserTableDdl);
@@ -132,7 +165,7 @@ public class DatabaseStorageService {
         log.info("Table 'user_fund_entitlements' created successfully.");
     }
 
-    public String save(String jsonMessage) {
+    public String save(String jsonMessage) throws JsonProcessingException {
         log.info("Saving JSON message to the database...");
 
         if (jsonMessage == null || jsonMessage.trim().isEmpty()) {
@@ -186,6 +219,9 @@ public class DatabaseStorageService {
             } else {
                 saveException(tradeDetails, jsonMessage, validationErrors);
             }
+        } catch (JsonProcessingException e) {
+            saveTechnicalException(jsonMessage, e);
+            throw e;
         } catch (Exception e) {
             saveTechnicalException(jsonMessage, e);
         }
@@ -200,11 +236,13 @@ public class DatabaseStorageService {
 
         String sqlTradeDetails = "SELECT COUNT(*) FROM trade_details WHERE client_reference_number = ?";
         Integer tradeCount = jdbcTemplate.queryForObject(sqlTradeDetails, new Object[]{clientReferenceNumber}, Integer.class);
+        if (tradeCount != null && tradeCount > 0) {
+            return true;
+        }
 
         String sqlTradeExceptions = "SELECT COUNT(*) FROM trade_exceptions WHERE client_reference_number = ?";
         Integer exceptionCount = jdbcTemplate.queryForObject(sqlTradeExceptions, new Object[]{clientReferenceNumber}, Integer.class);
-
-        return (tradeCount != null && tradeCount > 0) || (exceptionCount != null && exceptionCount > 0);
+        return exceptionCount != null && exceptionCount > 0;
     }
 
     private List<String> validateTradeDetails(TradeDetails tradeDetails) {

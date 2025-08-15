@@ -1,5 +1,6 @@
 package com.example.oraclejson;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -16,14 +17,16 @@ public class KafkaJsonListener {
         this.storageService = storageService;
     }
 
-    @KafkaListener(topics = "${app.kafka.topic.json-input}", groupId = "${spring.kafka.consumer.group-id}")
+    @KafkaListener(topics = "${app.kafka.topic.json-input}",
+            groupId = "${spring.kafka.consumer.group-id}",
+            containerFactory = "kafkaListenerContainerFactory")
     public void listen(String message) {
         log.info("Received message from Kafka topic: {}", message);
         try {
             storageService.save(message);
         } catch (Exception e) {
-            log.error("Failed to save message to database: {}", message, e);
-            // Here you might add logic to send the message to a dead-letter queue
+            log.error("An error occurred while processing the message. Skipping message: {}", message, e);
+            // Catch all exceptions to prevent retries and skip the poison pill message.
         }
     }
 }

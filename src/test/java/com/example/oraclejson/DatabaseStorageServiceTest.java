@@ -71,7 +71,7 @@ class DatabaseStorageServiceTest {
     }
 
     @Test
-    void testSaveJsonMessage() {
+    void testSaveJsonMessage() throws Exception {
         // Given
         String jsonMessage = "{\"key\":\"value\"}";
 
@@ -126,7 +126,7 @@ class DatabaseStorageServiceTest {
     }
 
     @Test
-    void testSaveTradeDetails_InvalidTradeDate() {
+    void testSaveTradeDetails_InvalidTradeDate() throws Exception {
         // Given
         Instant tradeDate = LocalDate.now(ZoneOffset.UTC).minus(1, ChronoUnit.DAYS).atStartOfDay().toInstant(ZoneOffset.UTC);
         Instant settleDate = tradeDate.plus(2, ChronoUnit.DAYS);
@@ -145,7 +145,7 @@ class DatabaseStorageServiceTest {
     }
 
     @Test
-    void testSaveTradeDetails_InvalidSettleDate() {
+    void testSaveTradeDetails_InvalidSettleDate() throws Exception {
         // Given
         Instant tradeDate = LocalDate.now(ZoneOffset.UTC).atStartOfDay().toInstant(ZoneOffset.UTC);
         Instant settleDate = tradeDate.minus(1, ChronoUnit.DAYS);
@@ -164,7 +164,7 @@ class DatabaseStorageServiceTest {
     }
 
     @Test
-    void testSaveTradeDetails_InvalidPrincipal() {
+    void testSaveTradeDetails_InvalidPrincipal() throws Exception {
         // Given
         Instant tradeDate = LocalDate.now(ZoneOffset.UTC).atStartOfDay().toInstant(ZoneOffset.UTC);
         Instant settleDate = tradeDate.plus(2, ChronoUnit.DAYS);
