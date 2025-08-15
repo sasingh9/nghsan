@@ -19,8 +19,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
-import java.security.Principal;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -40,8 +43,7 @@ public class JsonDataController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "100") int size,
-            Principal principal) {
+            @RequestParam(defaultValue = "100") int size) {
 
         if (startDate != null && endDate != null) {
             if (startDate.isAfter(endDate)) {
@@ -53,13 +55,18 @@ public class JsonDataController {
             }
         }
 
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+
         Pageable pageable = PageRequest.of(page, size);
-        return storageService.getDataByDateRangeForUser(startDate, endDate, principal.getName(), pageable);
+        return storageService.getDataByDateRangeForUser(startDate, endDate, username, pageable);
     }
 
     @GetMapping("/trades/{clientReferenceNumber}")
-    public List<TradeDetails> getTradesByClientReference(@PathVariable String clientReferenceNumber, Principal principal) {
-        return storageService.getTradeDetailsByClientReferenceForUser(clientReferenceNumber, principal.getName());
+    public List<TradeDetails> getTradesByClientReference(@PathVariable String clientReferenceNumber) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+        return storageService.getTradeDetailsByClientReferenceForUser(clientReferenceNumber, username);
     }
 
     /**
@@ -84,7 +91,9 @@ public class JsonDataController {
     }
 
     @GetMapping("/exceptions/{clientReferenceNumber}")
-    public List<TradeExceptionData> getExceptionsByClientReference(@PathVariable String clientReferenceNumber, Principal principal) {
-        return storageService.getTradeExceptionsByClientReferenceForUser(clientReferenceNumber, principal.getName());
+    public List<TradeExceptionData> getExceptionsByClientReference(@PathVariable String clientReferenceNumber) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+        return storageService.getTradeExceptionsByClientReferenceForUser(clientReferenceNumber, username);
     }
 }
