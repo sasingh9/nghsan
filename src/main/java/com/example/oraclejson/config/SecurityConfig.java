@@ -20,7 +20,7 @@ public class SecurityConfig {
         http
             .csrf().disable() // Disabling CSRF for now, will re-evaluate later
             .authorizeHttpRequests((authz) -> authz
-                .antMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                .antMatchers("/swagger-ui/**", "/v3/api-docs/**", "/health").permitAll()
                 .antMatchers("/api/**").hasRole("USER")
                 .anyRequest().authenticated()
             )
