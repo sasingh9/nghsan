@@ -10,6 +10,9 @@ import com.example.oraclejson.service.UniqueIdGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.context.annotation.Profile;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -321,23 +324,29 @@ public class DatabaseStorageService {
         }
     }
 
-    public List<JsonData> getDataByDateRange(LocalDateTime startDate, LocalDateTime endDate) {
-        StringBuilder sql = new StringBuilder("SELECT id, message_key, data, created_at FROM json_docs WHERE 1=1");
+    public Page<JsonData> getDataByDateRange(LocalDateTime startDate, LocalDateTime endDate, Pageable pageable) {
+        StringBuilder whereClause = new StringBuilder(" WHERE 1=1");
         List<Object> params = new ArrayList<>();
 
         if (startDate != null) {
-            sql.append(" AND created_at >= ?");
+            whereClause.append(" AND created_at >= ?");
             params.add(startDate);
         }
 
         if (endDate != null) {
-            sql.append(" AND created_at <= ?");
+            whereClause.append(" AND created_at <= ?");
             params.add(endDate);
         }
 
-        sql.append(" ORDER BY created_at DESC");
+        String countSql = "SELECT count(*) FROM json_docs" + whereClause.toString();
+        long total = jdbcTemplate.queryForObject(countSql, params.toArray(), Long.class);
 
-        return jdbcTemplate.query(sql.toString(), params.toArray(), (rs, rowNum) -> {
+        String sql = "SELECT id, message_key, data, created_at FROM json_docs" + whereClause.toString() +
+                " ORDER BY created_at DESC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
+        params.add(pageable.getOffset());
+        params.add(pageable.getPageSize());
+
+        List<JsonData> data = jdbcTemplate.query(sql, params.toArray(), (rs, rowNum) -> {
             long id = rs.getLong("id");
             String messageKey = rs.getString("message_key");
             byte[] dataBytes = rs.getBytes("data");
@@ -345,6 +354,8 @@ public class DatabaseStorageService {
             LocalDateTime createdAt = rs.getTimestamp("created_at").toLocalDateTime();
             return new JsonData(id, messageKey, jsonData, createdAt);
         });
+
+        return new PageImpl<>(data, pageable, total);
     }
 
     public List<TradeDetails> getTradeDetailsByClientReference(String clientReferenceNumber) {
@@ -388,12 +399,12 @@ public class DatabaseStorageService {
                 .orElse(Collections.emptyList());
     }
 
-    public List<JsonData> getDataByDateRangeForUser(LocalDateTime startDate, LocalDateTime endDate, String username) {
+    public Page<JsonData> getDataByDateRangeForUser(LocalDateTime startDate, LocalDateTime endDate, String username, Pageable pageable) {
         // This method is a bit tricky since json_docs is not directly tied to a fund.
         // For now, we will return all data, assuming this endpoint is for admins or for raw data inspection.
         // A more sophisticated implementation might involve parsing the JSON on the fly, which would be slow.
         log.warn("getDataByDateRangeForUser is not filtering by fund entitlement as json_docs has no fund_number. Returning all data.");
-        return getDataByDateRange(startDate, endDate);
+        return getDataByDateRange(startDate, endDate, pageable);
     }
 
     public List<TradeDetails> getTradeDetailsByClientReferenceForUser(String clientReferenceNumber, String username) {
