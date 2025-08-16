@@ -35,7 +35,7 @@ public class HealthCheckService {
 
     public ComponentStatus checkKafkaStatus() {
         try {
-            Map<String, ?> producerMetrics = kafkaTemplate.metrics();
+            Map<?, ?> producerMetrics = kafkaTemplate.metrics();
             if (producerMetrics != null && !producerMetrics.isEmpty()) {
                 return new ComponentStatus("kafka", "UP");
             } else {

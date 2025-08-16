@@ -46,5 +46,13 @@ public class DataLoader implements CommandLineRunner {
 
             userFundEntitlementRepository.saveAll(List.of(entitlement1, entitlement2));
         }
+
+        if (appUserRepository.findByUsername("supportuser").isEmpty()) {
+            AppUser supportUser = new AppUser();
+            supportUser.setUsername("supportuser");
+            supportUser.setPassword(passwordEncoder.encode("password"));
+            supportUser.setRoles("ROLE_SUPPORT");
+            appUserRepository.save(supportUser);
+        }
     }
 }
