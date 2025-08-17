@@ -8,11 +8,11 @@
         <version>2.7.5</version> <!-- Using a specific, stable version -->
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
-    <groupId>com.example</groupId>
-    <artifactId>oracle-json-demo</artifactId>
+    <groupId>com.poc</groupId>
+    <artifactId>trade-manager</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>oracle-json-demo</name>
-    <description>Demo project for Spring Boot with Oracle JSON</description>
+    <name>trade-manager</name>
+    <description>Demo project for Spring Boot with Trade Manager</description>
     <properties>
         <java.version>11</java.version>
     </properties>
