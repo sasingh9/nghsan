@@ -44,7 +44,7 @@ public class MessageProcessingService {
         this.tradeExceptionRepository = tradeExceptionRepository;
     }
 
-    @Async
+    @Async("asyncTaskExecutor")
     @Transactional
     public void processMessage(JsonDoc jsonDoc) {
         long startTime = System.currentTimeMillis();
