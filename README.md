@@ -1,15 +1,15 @@
-# Spring Boot Oracle Kafka JSON Demo
+# Spring Boot MySQL Kafka JSON Demo
 
-This project is a Spring Boot application that listens to a Kafka topic for JSON messages and stores them in an Oracle 19c (or later) database.
+This project is a Spring Boot application that listens to a Kafka topic for JSON messages and stores them in a MySQL database.
 
-It uses Spring Boot, Spring Kafka, Spring JDBC (`JdbcTemplate`), and the Oracle JDBC driver.
+It uses Spring Boot, Spring Kafka, Spring Data JPA, and the MySQL JDBC driver.
 
 ## How to Configure
 
 1.  Open the `src/main/resources/application.properties` file.
-2.  Update the Oracle database connection details:
+2.  Update the MySQL database connection details:
     ```properties
-    spring.datasource.url=jdbc:oracle:thin:@//your-db-host:1521/your-service-name
+    spring.datasource.url=jdbc:mysql://localhost:3306/tradedevdb?createDatabaseIfNotExist=true
     spring.datasource.username=your_username
     spring.datasource.password=your_password
     ```
@@ -23,7 +23,7 @@ It uses Spring Boot, Spring Kafka, Spring JDBC (`JdbcTemplate`), and the Oracle 
 ## How to Run
 
 1.  Make sure you have Java 11 (or later) and Maven installed.
-2.  Ensure you have access to a running Oracle database and a Kafka broker.
+2.  Ensure you have access to a running MySQL database and a Kafka broker.
 3.  Open a terminal or command prompt in the root directory of the project.
 4.  Run the application using the Spring Boot Maven plugin:
 
@@ -34,8 +34,8 @@ It uses Spring Boot, Spring Kafka, Spring JDBC (`JdbcTemplate`), and the Oracle 
 ## What it Does
 
 When you run the application, it will:
-1.  Connect to the Oracle database.
-2.  On first startup, it will drop and recreate the `json_docs` table with `id`, `data`, and `created_at` columns.
+1.  Connect to the MySQL database.
+2.  On first startup, it will create the necessary tables.
 3.  Connect to the configured Kafka broker and listen for messages to store in the database.
 4.  Start a web server on port 8080.
 5.  Expose a REST API endpoint at `GET /api/data` for retrieving stored JSON data.

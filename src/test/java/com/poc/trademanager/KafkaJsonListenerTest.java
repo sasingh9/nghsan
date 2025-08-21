@@ -15,15 +15,27 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.listener.ContainerProperties;
 import org.springframework.kafka.test.context.EmbeddedKafka;
 import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.context.ActiveProfiles;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.BDDMockito.given;
 
+import org.springframework.test.context.TestPropertySource;
+
 @SpringBootTest(properties = "spring.main.allow-bean-definition-overriding=true")
 @DirtiesContext
-@EmbeddedKafka(partitions = 1, topics = { "${app.kafka.topic.json-input}" })
+@EmbeddedKafka(partitions = 1, topics = { "test-json-topic" })
+@TestPropertySource(properties = {
+        "spring.kafka.producer.bootstrap-servers=${spring.embedded.kafka.brokers}",
+        "spring.kafka.consumer.bootstrap-servers=${spring.embedded.kafka.brokers}",
+        "app.kafka.topic.json-input=test-json-topic",
+        "spring.kafka.consumer.group-id=test-group",
+        "app.kafka.topic.json-output=json-trade-details-topic",
+        "spring.kafka.listener.ack-mode=MANUAL_IMMEDIATE"
+})
+@ActiveProfiles("test")
 class KafkaJsonListenerTest {
 
     @Autowired
