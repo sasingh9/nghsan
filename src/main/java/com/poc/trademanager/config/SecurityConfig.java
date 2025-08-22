@@ -2,6 +2,7 @@ package com.poc.trademanager.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
@@ -26,6 +27,7 @@ public class SecurityConfig {
             .cors(withDefaults())
             .csrf().disable() // Disabling CSRF for now, will re-evaluate later
             .authorizeHttpRequests((authz) -> authz
+                .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .antMatchers("/swagger-ui/**", "/v3/api-docs/**", "/health").permitAll()
                 .antMatchers("/api/**").hasRole("USER")
                 .anyRequest().authenticated()
