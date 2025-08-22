@@ -29,6 +29,7 @@ public class SecurityConfig {
             .authorizeHttpRequests((authz) -> authz
                 .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .antMatchers("/swagger-ui/**", "/v3/api-docs/**", "/health").permitAll()
+                .antMatchers("/api/data").permitAll()
                 .antMatchers("/api/**").hasRole("USER")
                 .anyRequest().authenticated()
             )
