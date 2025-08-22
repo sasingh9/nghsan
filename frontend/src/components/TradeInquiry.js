@@ -12,11 +12,12 @@ const TradeInquiry = () => {
         setError(null);
         try {
             const response = await fetch(`/api/trades/${clientRef}`);
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
             const data = await response.json();
-            setTrades(data);
+            if (response.ok && data.success) {
+                setTrades(data.data);
+            } else {
+                throw new Error(data.message || 'Network response was not ok');
+            }
         } catch (error) {
             setError(error.message);
         } finally {

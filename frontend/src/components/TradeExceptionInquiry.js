@@ -20,11 +20,12 @@ function TradeExceptionInquiry() {
 
         try {
             const response = await fetch(`/api/exceptions/${clientReference}`);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
             const data = await response.json();
-            setExceptions(data);
+            if (response.ok && data.success) {
+                setExceptions(data.data);
+            } else {
+                throw new Error(data.message || `HTTP error! status: ${response.status}`);
+            }
         } catch (e) {
             setError('Failed to fetch trade exceptions. ' + e.message);
             console.error(e);
