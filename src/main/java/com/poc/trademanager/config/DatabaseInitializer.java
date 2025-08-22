@@ -5,6 +5,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.annotation.Order;
 import org.springframework.core.io.Resource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.util.StreamUtils;
@@ -32,6 +33,7 @@ public class DatabaseInitializer {
 
 
     @Bean
+    @Order(1)
     public CommandLineRunner initializeDatabase(JdbcTemplate jdbcTemplate) {
         return args -> {
             jdbcTemplate.execute(createUserTableDdl);
