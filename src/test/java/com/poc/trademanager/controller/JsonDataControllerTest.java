@@ -10,12 +10,14 @@ import com.poc.trademanager.entity.JsonDoc;
 import com.poc.trademanager.service.MessageProcessingService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -29,6 +31,8 @@ import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -47,6 +51,12 @@ class JsonDataControllerTest {
 
     @MockBean
     private MessageProcessingService messageProcessingService;
+
+    @MockBean
+    private KafkaTemplate<String, String> kafkaTemplate;
+
+    @Value("${app.kafka.topic.json-input}")
+    private String topicName;
 
     private final String CORRELATION_ID = "test-correlation-id";
     private final String SOURCE_APP_ID = "test-app";
@@ -175,6 +185,38 @@ class JsonDataControllerTest {
     void whenProcessMessageManuallyWithInvalidRole_thenForbidden() throws Exception {
         String jsonMessage = "{\"valid\":\"json\"}";
         mockMvc.perform(post("/api/data")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonMessage)
+                        .header("X-Correlation-ID", CORRELATION_ID)
+                        .header("X-Source-Application-ID", SOURCE_APP_ID)
+                        .header("Authorization", AUTH_TOKEN))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "support-user", roles = {"SUPPORT"})
+    void whenPostMessageToKafkaWithValidRole_thenOk() throws Exception {
+        String jsonMessage = "{\"test\":\"message\"}";
+        mockMvc.perform(post("/api/messages")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonMessage)
+                        .header("X-Correlation-ID", CORRELATION_ID)
+                        .header("X-Source-Application-ID", SOURCE_APP_ID)
+                        .header("Authorization", AUTH_TOKEN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("Message sent successfully to Kafka.")));
+
+        verify(kafkaTemplate, times(1)).send(topicName, jsonMessage);
+    }
+
+    @Test
+    @WithMockUser(username = "test-user", roles = {"USER"})
+    void whenPostMessageToKafkaWithInvalidRole_thenForbidden() throws Exception {
+        String jsonMessage = "{\"test\":\"message\"}";
+        mockMvc.perform(post("/api/messages")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonMessage)

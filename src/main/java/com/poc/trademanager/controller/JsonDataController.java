@@ -10,6 +10,7 @@ import com.poc.trademanager.entity.JsonDoc;
 import com.poc.trademanager.service.MessageProcessingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -17,11 +18,12 @@ import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -31,6 +33,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
@@ -39,10 +42,15 @@ public class JsonDataController {
     private static final Logger log = LoggerFactory.getLogger(JsonDataController.class);
     private final DatabaseStorageService storageService;
     private final MessageProcessingService messageProcessingService;
+    private final KafkaTemplate<String, String> kafkaTemplate;
 
-    public JsonDataController(DatabaseStorageService storageService, MessageProcessingService messageProcessingService) {
+    @Value("${app.kafka.topic.json-input}")
+    private String topicName;
+
+    public JsonDataController(DatabaseStorageService storageService, MessageProcessingService messageProcessingService, KafkaTemplate<String, String> kafkaTemplate) {
         this.storageService = storageService;
         this.messageProcessingService = messageProcessingService;
+        this.kafkaTemplate = kafkaTemplate;
     }
 
     @GetMapping("/data")
@@ -81,6 +89,21 @@ public class JsonDataController {
         String username = authentication.getName();
         List<TradeDetailsDto> trades = storageService.getTradeDetailsByClientReferenceForUser(clientReferenceNumber, username);
         return ResponseEntity.ok(new ApiResponse<>(true, "Trades retrieved successfully", trades));
+    }
+
+    @PostMapping("/messages")
+    @PreAuthorize("hasRole('SUPPORT')")
+    public ResponseEntity<ApiResponse<String>> postMessageToKafka(@RequestBody String message) {
+        try {
+            log.info("Received request to post message to Kafka topic '{}'", topicName);
+            kafkaTemplate.send(topicName, message);
+            log.info("Message sent successfully to Kafka topic '{}'", topicName);
+            return ResponseEntity.ok(new ApiResponse<>(true, "Message sent successfully to Kafka.", null));
+        } catch (Exception e) {
+            log.error("Error sending message to Kafka", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>(false, "Failed to send message to Kafka: " + e.getMessage(), null));
+        }
     }
 
     /**

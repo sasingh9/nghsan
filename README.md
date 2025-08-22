@@ -2,72 +2,66 @@
 
 This project is a Spring Boot application that listens to a Kafka topic for JSON messages and stores them in a MySQL database.
 
-It uses Spring Boot, Spring Kafka, Spring Data JPA, and the MySQL JDBC driver.
+It uses Spring Boot, Spring Kafka, Spring Data JPA, MySQL, and H2.
 
-## How to Configure
+## How to Run the Backend
 
-1.  Open the `src/main/resources/application.properties` file.
-2.  Update the MySQL database connection details:
-    ```properties
-    spring.datasource.url=jdbc:mysql://localhost:3306/tradedevdb?createDatabaseIfNotExist=true
-    spring.datasource.username=your_username
-    spring.datasource.password=your_password
-    ```
-3.  Update the Kafka consumer configuration:
-    ```properties
-    spring.kafka.consumer.bootstrap-servers=your-kafka-broker:9092
-    spring.kafka.consumer.group-id=your-consumer-group
-    app.kafka.topic.json-input=your-kafka-topic
-    ```
+This application uses Spring Profiles to manage database configurations.
 
-## How to Run
+### Default Profile (H2 In-Memory)
 
-1.  Make sure you have Java 11 (or later) and Maven installed.
-2.  Ensure you have access to a running MySQL database and a Kafka broker.
-3.  Open a terminal or command prompt in the root directory of the project.
-4.  Run the application using the Spring Boot Maven plugin:
+By default, without specifying a profile, the application will run with an in-memory H2 database. This is useful for quick local testing without needing to set up a separate database.
 
-    ```bash
-    mvn spring-boot:run
-    ```
+To run with the default profile:
+```bash
+mvn spring-boot:run
+```
 
-## What it Does
+### 'dev' Profile (MySQL)
 
-When you run the application, it will:
-1.  Connect to the MySQL database.
-2.  On first startup, it will create the necessary tables.
-3.  Connect to the configured Kafka broker and listen for messages to store in the database.
-4.  Start a web server on port 8080.
-5.  Expose a REST API endpoint at `GET /api/data` for retrieving stored JSON data.
+To run the application with a MySQL database, you need to activate the `dev` profile.
 
-The application will continue running to listen for new messages and serve API requests. You can stop it with `Ctrl+C`.
+**Prerequisites:**
+1.  A running MySQL server on `localhost:3306`.
+2.  The application will attempt to connect to a database named `tradedevdb` and create it if it doesn't exist.
+3.  The connection uses the username `root` and password `password`. You can change these defaults in `src/main/resources/application-dev.properties`.
+
+To run with the `dev` profile:
+```bash
+mvn spring-boot:run -Dspring-boot.run.profiles=dev
+```
+
+When you run with the `dev` profile, Hibernate will automatically create or update the necessary tables in your `tradedevdb` database on startup.
 
 ## Full-Stack Application (with React UI)
 
-This project now includes a React frontend for viewing the data. To run the full application:
+This project is the backend for a full-stack application. To run the entire application with its frontend:
 
 ### 1. Run the Backend
 
-Follow the instructions in the "How to Run" section above to start the Spring Boot application. The backend will run on `http://localhost:8080`.
+Follow the instructions above to start the Spring Boot application, typically using the `dev` profile to connect to a persistent MySQL database. The backend will run on `http://localhost:8080`.
 
 ### 2. Run the Frontend
 
+**Important: Frontend Proxy Configuration**
+
+To allow the frontend development server (running on `localhost:3000`) to communicate with the backend (on `localhost:8080`), you must configure a proxy. This bypasses browser CORS (Cross-Origin Resource Sharing) restrictions during development.
+
+If your React application was created with `create-react-app`, add the following line to your frontend's `package.json` file:
+```json
+  "proxy": "http://localhost:8080"
+```
+
+After adding this, **you must restart your React development server**.
+
+With the proxy configured, you can run the frontend:
 1.  Make sure you have Node.js and npm installed.
 2.  Open a new terminal window.
-3.  Navigate to the `frontend` directory:
-    ```bash
-    cd frontend
-    ```
-4.  Install the dependencies:
-    ```bash
-    npm install
-    ```
-5.  Start the React development server:
-    ```bash
-    npm start
-    ```
+3.  Navigate to the `frontend` directory.
+4.  Install the dependencies: `npm install`
+5.  Start the React development server: `npm start`
     This will open the user interface in your web browser, usually at `http://localhost:3000`.
 
 ### 3. Using the UI
 
-The React application will load in your browser. You can use the date and time pickers to select a date range and click "Fetch Data" to see the JSON records stored in the database within that timeframe.
+The React application will load in your browser. Your API calls in the frontend code should be made to relative paths (e.g., `/api/data`), not absolute URLs. The proxy will automatically forward these requests to the backend.
