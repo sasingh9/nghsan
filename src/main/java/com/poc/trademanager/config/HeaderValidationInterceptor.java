@@ -11,6 +11,9 @@ public class HeaderValidationInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            return true;
+        }
         String correlationId = request.getHeader("X-Correlation-ID");
         if (correlationId == null || correlationId.trim().isEmpty()) {
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Missing required header: X-Correlation-ID");
