@@ -29,7 +29,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -47,8 +47,8 @@ public class JsonDataController {
 
     @GetMapping("/data")
     public ResponseEntity<ApiResponse<Page<JsonData>>> getData(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "100") int size) {
 
@@ -66,7 +66,12 @@ public class JsonDataController {
         String username = authentication.getName();
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<JsonData> data = storageService.getDataByDateRangeForUser(startDate, endDate, username, pageable);
+        Page<JsonData> data = storageService.getDataByDateRangeForUser(
+            startDate != null ? startDate.toLocalDate() : null,
+            endDate != null ? endDate.toLocalDate() : null,
+            username,
+            pageable
+        );
         return ResponseEntity.ok(new ApiResponse<>(true, "Data retrieved successfully", data));
     }
 
