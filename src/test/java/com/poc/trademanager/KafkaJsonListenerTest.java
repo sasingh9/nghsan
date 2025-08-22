@@ -26,12 +26,13 @@ import org.springframework.test.context.TestPropertySource;
 
 @SpringBootTest(properties = "spring.main.allow-bean-definition-overriding=true")
 @DirtiesContext
-@EmbeddedKafka(partitions = 1, topics = { "test-json-topic" })
+@EmbeddedKafka(partitions = 1, topics = {"test-json-topic"})
 @TestPropertySource(properties = {
         "spring.kafka.producer.bootstrap-servers=${spring.embedded.kafka.brokers}",
         "spring.kafka.consumer.bootstrap-servers=${spring.embedded.kafka.brokers}",
         "app.kafka.topic.json-input=test-json-topic",
         "spring.kafka.consumer.group-id=test-group",
+        "spring.kafka.consumer.auto-offset-reset=earliest",
         "app.kafka.topic.json-output=json-trade-details-topic",
         "spring.kafka.listener.ack-mode=MANUAL_IMMEDIATE"
 })

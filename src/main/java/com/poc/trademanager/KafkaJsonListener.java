@@ -19,13 +19,14 @@ public class KafkaJsonListener {
     public KafkaJsonListener(DatabaseStorageService storageService, MessageProcessingService messageProcessingService) {
         this.storageService = storageService;
         this.messageProcessingService = messageProcessingService;
+        log.info("KafkaJsonListener created!");
     }
 
     @KafkaListener(topics = "${app.kafka.topic.json-input}",
             groupId = "${spring.kafka.consumer.group-id}",
             containerFactory = "kafkaListenerContainerFactory")
     public void listen(String message, Acknowledgment acknowledgment) {
-        log.info("Received message from Kafka topic.");
+        log.info("KafkaJsonListener: Received message from Kafka topic.");
         long startTime = System.currentTimeMillis();
         try {
             JsonDoc jsonDoc = storageService.saveRawMessage(message);
