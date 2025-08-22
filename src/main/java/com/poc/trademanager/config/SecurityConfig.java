@@ -18,6 +18,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+            .cors(withDefaults())
             .csrf().disable() // Disabling CSRF for now, will re-evaluate later
             .authorizeHttpRequests((authz) -> authz
                 .antMatchers("/swagger-ui/**", "/v3/api-docs/**", "/health").permitAll()
