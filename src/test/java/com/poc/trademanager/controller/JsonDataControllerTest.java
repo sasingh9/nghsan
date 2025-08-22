@@ -64,8 +64,8 @@ class JsonDataControllerTest {
 
         given(databaseStorageService.getDataByDateRangeForUser(any(), any(), anyString(), any(Pageable.class))).willReturn(pageData);
 
-        String startDate = "2023-01-01";
-        String endDate = "2023-01-31";
+        String startDate = "2023-01-01T00:00:00";
+        String endDate = "2023-01-31T23:59:59";
 
         // When & Then
         mockMvc.perform(get("/api/data")
@@ -84,8 +84,8 @@ class JsonDataControllerTest {
 
     @Test
     void whenGetDataWithInvalidDateRange_thenBadRequest() throws Exception {
-        String startDate = "2023-02-01";
-        String endDate = "2023-01-01"; // End date is before start date
+        String startDate = "2023-02-01T00:00:00";
+        String endDate = "2023-01-01T23:59:59"; // End date is before start date
 
         mockMvc.perform(get("/api/data")
                         .header("X-Correlation-ID", CORRELATION_ID)
@@ -98,8 +98,8 @@ class JsonDataControllerTest {
 
     @Test
     void whenGetDataWithOver31Days_thenBadRequest() throws Exception {
-        String startDate = "2023-01-01";
-        String endDate = "2023-02-02"; // 32 days
+        String startDate = "2023-01-01T00:00:00";
+        String endDate = "2023-02-02T00:00:00"; // 32 days
 
         mockMvc.perform(get("/api/data")
                         .header("X-Correlation-ID", CORRELATION_ID)
