@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
-import DataGrid from 'react-data-grid';
-import 'react-data-grid/lib/styles.css';
+import { DataGrid } from '@mui/x-data-grid';
+import { Button, TextField, Typography, Box } from '@mui/material';
 
 const columns = [
-    { key: 'clientReferenceNumber', name: 'Client Ref' },
-    { key: 'fundNumber', name: 'Fund' },
-    { key: 'securityId', name: 'Security ID' },
-    { key: 'tradeDate', name: 'Trade Date' },
-    { key: 'settleDate', name: 'Settle Date' },
-    { key: 'quantity', name: 'Quantity' },
-    { key: 'price', name: 'Price' },
-    { key: 'principal', name: 'Principal' },
-    { key: 'netAmount', name: 'Net Amount' }
+    { field: 'clientReferenceNumber', headerName: 'Client Ref', width: 150 },
+    { field: 'fundNumber', headerName: 'Fund', width: 100 },
+    { field: 'securityId', headerName: 'Security ID', width: 150 },
+    { field: 'tradeDate', headerName: 'Trade Date', width: 150 },
+    { field: 'settleDate', headerName: 'Settle Date', width: 150 },
+    { field: 'quantity', headerName: 'Quantity', width: 120 },
+    { field: 'price', headerName: 'Price', width: 120 },
+    { field: 'principal', headerName: 'Principal', width: 120 },
+    { field: 'netAmount', headerName: 'Net Amount', width: 120 }
 ];
 
 const TradeInquiry = () => {
@@ -54,21 +54,30 @@ const TradeInquiry = () => {
 
     return (
         <div>
-            <h2>Trade Inquiry</h2>
-            <form onSubmit={handleSubmit}>
-                <input
-                    type="text"
+            <Typography variant="h4" gutterBottom>Trade Inquiry</Typography>
+            <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                <TextField
+                    label="Client Reference Number"
                     value={clientRef}
                     onChange={(e) => setClientRef(e.target.value)}
-                    placeholder="Enter Client Reference Number"
+                    variant="outlined"
+                    size="small"
                 />
-                <button type="submit">Search</button>
-            </form>
+                <Button type="submit" variant="contained">Search</Button>
+            </Box>
 
-            {loading && <p>Loading...</p>}
-            {error && <p>Error: {error}</p>}
+            {error && <Typography color="error">{error}</Typography>}
 
-            <DataGrid columns={columns} rows={trades} />
+            <div style={{ height: 600, width: '100%' }}>
+                <DataGrid
+                    rows={trades}
+                    columns={columns}
+                    pageSize={10}
+                    rowsPerPageOptions={[10]}
+                    loading={loading}
+                    getRowId={(row) => row.clientReferenceNumber + row.fundNumber + row.securityId} // Assuming this combination is unique
+                />
+            </div>
         </div>
     );
 };

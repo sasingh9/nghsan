@@ -1,8 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import App from './App';
 
-test('renders page header', () => {
+test('renders the main app layout', () => {
   render(<App />);
-  const linkElement = screen.getByText(/json data viewer/i);
-  expect(linkElement).toBeInTheDocument();
+  const titleElement = screen.getByText(/Trade Manager/i);
+  expect(titleElement).toBeInTheDocument();
 });

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import { DataGrid } from '@mui/x-data-grid';
 import { Button, TextField, Typography, Box, Modal, Paper } from '@mui/material';
 
@@ -14,9 +15,10 @@ const style = {
     p: 4,
 };
 
-function TradeExceptionInquiry() {
-    const [clientReference, setClientReference] = useState('');
-    const [exceptions, setExceptions] = useState([]);
+const JsonDataViewer = () => {
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+    const [data, setData] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [open, setOpen] = useState(false);
@@ -33,13 +35,12 @@ function TradeExceptionInquiry() {
     };
 
     const columns = [
-        { field: 'id', headerName: 'ID', width: 100 },
-        { field: 'clientReferenceNumber', headerName: 'Client Reference', width: 200 },
-        { field: 'failureReason', headerName: 'Failure Reason', width: 300 },
+        { field: 'id', headerName: 'Record ID', width: 150 },
+        { field: 'messageKey', headerName: 'Message Key', width: 250 },
         { field: 'createdAt', headerName: 'Created At', width: 200, valueGetter: (value) => new Date(value).toLocaleString() },
         {
-            field: 'failedTradeJson',
-            headerName: 'Failed JSON',
+            field: 'jsonData',
+            headerName: 'JSON Data',
             width: 150,
             renderCell: (params) => (
                 <Button variant="outlined" onClick={() => handleOpen(params.value)}>
@@ -49,38 +50,31 @@ function TradeExceptionInquiry() {
         },
     ];
 
-    const handleSubmit = async (event) => {
-        event.preventDefault();
+    const fetchData = async () => {
         setLoading(true);
         setError('');
-        setExceptions([]);
+        setData([]);
 
-        if (!clientReference) {
-            setError('Please enter a Client Reference Number.');
+        if (!startDate || !endDate) {
+            setError('Please select both a start and end date.');
             setLoading(false);
             return;
         }
 
         try {
-            const headers = new Headers();
-            headers.append('X-Correlation-ID', 'jules-debug-session');
-            headers.append('X-Source-Application-ID', 'frontend');
-            headers.append('Authorization', 'Basic ' + btoa('user:password'));
-
-            const response = await fetch(`/api/exceptions/${clientReference}`, {
-                method: 'GET',
-                headers: headers,
-                credentials: 'include'
-            });
-            const data = await response.json();
-            if (response.ok && data.success) {
-                setExceptions(data.data);
+            const params = {
+                startDate: new Date(startDate).toISOString(),
+                endDate: new Date(endDate).toISOString(),
+            };
+            const response = await axios.get('/api/data', { params });
+            if (response.data && response.data.success) {
+                setData(response.data.data.content);
             } else {
-                throw new Error(data.message || `HTTP error! status: ${response.status}`);
+                setError(response.data.message || 'Failed to fetch data.');
             }
-        } catch (e) {
-            setError('Failed to fetch trade exceptions. ' + e.message);
-            console.error(e);
+        } catch (err) {
+            setError('Failed to fetch data. Make sure the backend is running.');
+            console.error(err);
         } finally {
             setLoading(false);
         }
@@ -88,25 +82,30 @@ function TradeExceptionInquiry() {
 
     return (
         <div>
-            <Typography variant="h4" gutterBottom>Trade Exception Inquiry</Typography>
-            <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', gap: 2, mb: 2 }}>
+            <Typography variant="h4" gutterBottom>JSON Data Viewer</Typography>
+            <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
                 <TextField
-                    label="Client Reference Number"
-                    value={clientReference}
-                    onChange={(e) => setClientReference(e.target.value)}
-                    variant="outlined"
-                    size="small"
+                    label="Start Date"
+                    type="datetime-local"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
                 />
-                <Button type="submit" disabled={loading} variant="contained">
-                    {loading ? 'Loading...' : 'Fetch Exceptions'}
+                <TextField
+                    label="End Date"
+                    type="datetime-local"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                />
+                <Button onClick={fetchData} disabled={loading} variant="contained">
+                    {loading ? 'Loading...' : 'Fetch Data'}
                 </Button>
             </Box>
-
             {error && <Typography color="error">{error}</Typography>}
-
             <div style={{ height: 600, width: '100%' }}>
                 <DataGrid
-                    rows={exceptions}
+                    rows={data}
                     columns={columns}
                     pageSize={10}
                     rowsPerPageOptions={[10]}
@@ -121,7 +120,7 @@ function TradeExceptionInquiry() {
             >
                 <Paper sx={style}>
                     <Typography id="modal-title" variant="h6" component="h2">
-                        Failed Trade JSON
+                        JSON Data
                     </Typography>
                     <pre id="modal-description" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
                         {selectedJson ? JSON.stringify(JSON.parse(selectedJson), null, 2) : ''}
@@ -130,6 +129,6 @@ function TradeExceptionInquiry() {
             </Modal>
         </div>
     );
-}
+};
 
-export default TradeExceptionInquiry;
+export default JsonDataViewer;
