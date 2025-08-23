@@ -29,7 +29,10 @@ function App() {
                 endDate: new Date(endDate).toISOString(),
             };
             const response = await axios.get('/api/data', { params });
+            console.log('Full response:', response);
+            console.log('Response data:', response.data);
             if (response.data && response.data.success) {
+                console.log('Response data.data.content:', response.data.data.content);
                 setData(response.data.data.content);
             } else {
                 setError(response.data.message || 'Failed to fetch data.');
