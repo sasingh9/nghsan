@@ -15,7 +15,16 @@ const TradeInquiry = () => {
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch(`/api/trades/${clientRef}`, { credentials: 'include' });
+            const headers = new Headers();
+            headers.append('X-Correlation-ID', 'jules-debug-session');
+            headers.append('X-Source-Application-ID', 'frontend');
+            headers.append('Authorization', 'Basic ' + btoa('user:password'));
+
+            const response = await fetch(`/api/trades/${clientRef}`, {
+                method: 'GET',
+                headers: headers,
+                credentials: 'include'
+            });
             const data = await response.json();
             if (response.ok && data.success) {
                 setTrades(data.data);
