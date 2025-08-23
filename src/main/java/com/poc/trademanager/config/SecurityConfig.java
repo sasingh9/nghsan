@@ -27,11 +27,13 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .cors(withDefaults())
-            .csrf().disable() // Disabling CSRF for now, will re-evaluate later
-            .authorizeHttpRequests((authz) -> authz
-                .anyRequest().permitAll()
-            );
+                .cors(withDefaults())
+                .csrf(csrf -> csrf.disable())
+                .authorizeHttpRequests(authz -> authz
+                        .antMatchers("/api/**").authenticated()
+                        .anyRequest().permitAll())
+                .formLogin(withDefaults())
+                .httpBasic(withDefaults());
         return http.build();
     }
 

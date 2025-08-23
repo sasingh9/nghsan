@@ -29,14 +29,11 @@ const TradeInquiry = () => {
         setLoading(true);
         setError(null);
         try {
-            const headers = new Headers();
-            headers.append('X-Correlation-ID', 'jules-debug-session');
-            headers.append('X-Source-Application-ID', 'frontend');
-            headers.append('Authorization', 'Basic ' + btoa('user:password'));
-
             const response = await fetch(`/api/trades/${clientRef}`, {
                 method: 'GET',
-                headers: headers,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
                 credentials: 'include'
             });
             const data = await response.json();
