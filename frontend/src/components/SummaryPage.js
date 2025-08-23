@@ -1,22 +1,41 @@
 import React, { useState, useEffect } from 'react';
-import { Typography, Paper } from '@mui/material';
+import axios from 'axios';
+import { Typography, Paper, CircularProgress, Alert } from '@mui/material';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-
-const placeholderData = [
-    { fund: 'Fund A', received: 4000, created: 2400, exceptions: 240 },
-    { fund: 'Fund B', received: 3000, created: 1398, exceptions: 221 },
-    { fund: 'Fund C', received: 2000, created: 9800, exceptions: 229 },
-    { fund: 'Fund D', received: 2780, created: 3908, exceptions: 200 },
-    { fund: 'Fund E', received: 1890, created: 4800, exceptions: 218 },
-];
 
 const SummaryPage = () => {
     const [summaryData, setSummaryData] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
-        // In a real application, you would fetch this data from an API.
-        setSummaryData(placeholderData);
+        const fetchSummaryData = async () => {
+            try {
+                setLoading(true);
+                const response = await axios.get('/api/summary/trades-by-fund');
+                if (response.data && response.data.success) {
+                    setSummaryData(response.data.data);
+                } else {
+                    setError(response.data.message || 'Failed to fetch summary data.');
+                }
+            } catch (err) {
+                setError('Failed to fetch summary data. Make sure the backend is running.');
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchSummaryData();
     }, []);
+
+    if (loading) {
+        return <CircularProgress />;
+    }
+
+    if (error) {
+        return <Alert severity="error">{error}</Alert>;
+    }
 
     return (
         <div>
@@ -32,12 +51,12 @@ const SummaryPage = () => {
                         }}
                     >
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="fund" />
+                        <XAxis dataKey="fundNumber" />
                         <YAxis />
                         <Tooltip />
                         <Legend />
-                        <Bar dataKey="received" fill="#8884d8" name="Trades Received" />
-                        <Bar dataKey="created" fill="#82ca9d" name="Trades Created" />
+                        <Bar dataKey="tradesReceived" fill="#8884d8" name="Trades Received" />
+                        <Bar dataKey="tradesCreated" fill="#82ca9d" name="Trades Created" />
                         <Bar dataKey="exceptions" fill="#ffc658" name="Exceptions" />
                     </BarChart>
                 </ResponsiveContainer>

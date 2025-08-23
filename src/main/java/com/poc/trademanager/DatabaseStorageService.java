@@ -1,8 +1,10 @@
 package com.poc.trademanager;
 
+import com.poc.trademanager.dto.FundTradeCount;
 import com.poc.trademanager.dto.JsonData;
 import com.poc.trademanager.dto.TradeDetailsDto;
 import com.poc.trademanager.dto.TradeExceptionData;
+import com.poc.trademanager.dto.TradeSummaryDto;
 import com.poc.trademanager.entity.JsonDoc;
 import com.poc.trademanager.entity.TradeDetail;
 import com.poc.trademanager.entity.TradeException;
@@ -28,8 +30,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -43,14 +47,16 @@ public class DatabaseStorageService {
     private final JsonDocRepository jsonDocRepository;
     private final TradeDetailRepository tradeDetailRepository;
     private final TradeExceptionRepository tradeExceptionRepository;
+    private final ObjectMapper objectMapper;
 
-    public DatabaseStorageService(AppUserRepository appUserRepository, UserFundEntitlementRepository userFundEntitlementRepository, UniqueIdGenerator uniqueIdGenerator, JsonDocRepository jsonDocRepository, TradeDetailRepository tradeDetailRepository, TradeExceptionRepository tradeExceptionRepository) {
+    public DatabaseStorageService(AppUserRepository appUserRepository, UserFundEntitlementRepository userFundEntitlementRepository, UniqueIdGenerator uniqueIdGenerator, JsonDocRepository jsonDocRepository, TradeDetailRepository tradeDetailRepository, TradeExceptionRepository tradeExceptionRepository, ObjectMapper objectMapper) {
         this.appUserRepository = appUserRepository;
         this.userFundEntitlementRepository = userFundEntitlementRepository;
         this.uniqueIdGenerator = uniqueIdGenerator;
         this.jsonDocRepository = jsonDocRepository;
         this.tradeDetailRepository = tradeDetailRepository;
         this.tradeExceptionRepository = tradeExceptionRepository;
+        this.objectMapper = objectMapper;
     }
 
     @Transactional
@@ -152,5 +158,36 @@ public class DatabaseStorageService {
                 tradeException.getErrorType(),
                 tradeException.getCreatedAt()
         );
+    }
+
+    public List<TradeSummaryDto> getTradeSummary() {
+        List<FundTradeCount> createdCounts = tradeDetailRepository.countByFundNumber();
+        List<TradeException> exceptions = tradeExceptionRepository.findAll();
+
+        Map<String, Long> exceptionCounts = exceptions.stream()
+                .collect(Collectors.groupingBy(ex -> {
+                    try {
+                        Map<String, Object> tradeData = objectMapper.readValue(ex.getFailedTradeJson(), Map.class);
+                        return (String) tradeData.getOrDefault("fundNumber", "UNKNOWN");
+                    } catch (Exception e) {
+                        log.error("Error parsing failed trade JSON for exception ID {}: {}", ex.getId(), e.getMessage());
+                        return "UNKNOWN";
+                    }
+                }, Collectors.counting()));
+
+        Map<String, TradeSummaryDto> summaryMap = createdCounts.stream()
+                .collect(Collectors.toMap(
+                        FundTradeCount::getFundNumber,
+                        dto -> new TradeSummaryDto(dto.getFundNumber(), dto.getCount(), dto.getCount(), 0L)
+                ));
+
+        exceptionCounts.forEach((fundNumber, count) -> {
+            summaryMap.computeIfAbsent(fundNumber, fn -> new TradeSummaryDto(fn, 0L, 0L, 0L));
+            TradeSummaryDto summary = summaryMap.get(fundNumber);
+            summary.setExceptions(count);
+            summary.setTradesReceived(summary.getTradesCreated() + count);
+        });
+
+        return new ArrayList<>(summaryMap.values());
     }
 }

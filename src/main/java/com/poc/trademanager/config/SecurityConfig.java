@@ -2,6 +2,7 @@ package com.poc.trademanager.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -20,6 +21,7 @@ import static org.springframework.security.config.Customizer.withDefaults;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
+@Order(1)
 public class SecurityConfig {
 
     @Bean
@@ -28,14 +30,8 @@ public class SecurityConfig {
             .cors(withDefaults())
             .csrf().disable() // Disabling CSRF for now, will re-evaluate later
             .authorizeHttpRequests((authz) -> authz
-                .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                .antMatchers("/swagger-ui/**", "/v3/api-docs/**", "/health").permitAll()
-                .antMatchers("/api/data").permitAll()
-                .antMatchers(HttpMethod.POST, "/api/messages").hasRole("SUPPORT")
-                .antMatchers("/api/**").hasRole("USER")
-                .anyRequest().authenticated()
-            )
-            .httpBasic(withDefaults());
+                .anyRequest().permitAll()
+            );
         return http.build();
     }
 

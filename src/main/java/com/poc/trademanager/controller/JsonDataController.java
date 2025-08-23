@@ -6,6 +6,7 @@ import com.poc.trademanager.dto.ErrorResponse;
 import com.poc.trademanager.dto.JsonData;
 import com.poc.trademanager.dto.TradeDetailsDto;
 import com.poc.trademanager.dto.TradeExceptionData;
+import com.poc.trademanager.dto.TradeSummaryDto;
 import com.poc.trademanager.entity.JsonDoc;
 import com.poc.trademanager.service.MessageProcessingService;
 import org.slf4j.Logger;
@@ -136,5 +137,11 @@ public class JsonDataController {
         String username = authentication.getName();
         List<TradeExceptionData> exceptions = storageService.getTradeExceptionsByClientReferenceForUser(clientReferenceNumber, username);
         return ResponseEntity.ok(new ApiResponse<>(true, "Exceptions retrieved successfully", exceptions));
+    }
+
+    @GetMapping("/summary/trades-by-fund")
+    public ResponseEntity<ApiResponse<List<TradeSummaryDto>>> getTradeSummary() {
+        List<TradeSummaryDto> summary = storageService.getTradeSummary();
+        return ResponseEntity.ok(new ApiResponse<>(true, "Trade summary retrieved successfully", summary));
     }
 }
