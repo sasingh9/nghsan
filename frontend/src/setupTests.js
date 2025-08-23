@@ -3,3 +3,18 @@
 // expect(element).toHaveTextContent(/react/i)
 // learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom';
+
+// Mock ResizeObserver for Recharts
+class ResizeObserver {
+    observe() {
+        // do nothing
+    }
+    unobserve() {
+        // do nothing
+    }
+    disconnect() {
+        // do nothing
+    }
+}
+
+window.ResizeObserver = ResizeObserver;
