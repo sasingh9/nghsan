@@ -8,10 +8,14 @@ const TradeInquiry = () => {
 
     const handleSubmit = async (event) => {
         event.preventDefault();
+        if (!clientRef.trim()) {
+            setError('Please enter a Client Reference Number.');
+            return;
+        }
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch(`/api/trades/${clientRef}`);
+            const response = await fetch(`/api/trades/${clientRef}`, { credentials: 'include' });
             const data = await response.json();
             if (response.ok && data.success) {
                 setTrades(data.data);

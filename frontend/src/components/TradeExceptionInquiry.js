@@ -19,7 +19,7 @@ function TradeExceptionInquiry() {
         }
 
         try {
-            const response = await fetch(`/api/exceptions/${clientReference}`);
+            const response = await fetch(`/api/exceptions/${clientReference}`, { credentials: 'include' });
             const data = await response.json();
             if (response.ok && data.success) {
                 setExceptions(data.data);
