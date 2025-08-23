@@ -1,4 +1,18 @@
 import React, { useState } from 'react';
+import DataGrid from 'react-data-grid';
+import 'react-data-grid/lib/styles.css';
+
+const columns = [
+    { key: 'clientReferenceNumber', name: 'Client Ref' },
+    { key: 'fundNumber', name: 'Fund' },
+    { key: 'securityId', name: 'Security ID' },
+    { key: 'tradeDate', name: 'Trade Date' },
+    { key: 'settleDate', name: 'Settle Date' },
+    { key: 'quantity', name: 'Quantity' },
+    { key: 'price', name: 'Price' },
+    { key: 'principal', name: 'Principal' },
+    { key: 'netAmount', name: 'Net Amount' }
+];
 
 const TradeInquiry = () => {
     const [clientRef, setClientRef] = useState('');
@@ -54,36 +68,7 @@ const TradeInquiry = () => {
             {loading && <p>Loading...</p>}
             {error && <p>Error: {error}</p>}
 
-            <table>
-                <thead>
-                    <tr>
-                        <th>Client Ref</th>
-                        <th>Fund</th>
-                        <th>Security ID</th>
-                        <th>Trade Date</th>
-                        <th>Settle Date</th>
-                        <th>Quantity</th>
-                        <th>Price</th>
-                        <th>Principal</th>
-                        <th>Net Amount</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {trades.map((trade, index) => (
-                        <tr key={index}>
-                            <td>{trade.clientReferenceNumber}</td>
-                            <td>{trade.fundNumber}</td>
-                            <td>{trade.securityId}</td>
-                            <td>{trade.tradeDate}</td>
-                            <td>{trade.settleDate}</td>
-                            <td>{trade.quantity}</td>
-                            <td>{trade.price}</td>
-                            <td>{trade.principal}</td>
-                            <td>{trade.netAmount}</td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
+            <DataGrid columns={columns} rows={trades} />
         </div>
     );
 };
