@@ -76,19 +76,12 @@ public class DatabaseStorageService {
         return jsonDocRepository.save(jsonDoc);
     }
 
-    public Page<JsonData> getDataByDateRange(LocalDate startDate, LocalDate endDate, Pageable pageable) {
+    public Page<JsonData> getDataByDateRange(LocalDate startDate, LocalDate endDate, String contentFilter, Pageable pageable) {
         LocalDateTime startDateTime = startDate != null ? startDate.atStartOfDay() : null;
         LocalDateTime endDateTime = endDate != null ? endDate.plusDays(1).atStartOfDay() : null;
 
-        if (startDateTime != null && endDateTime != null) {
-            return jsonDocRepository.findByCreatedAtBetween(startDateTime, endDateTime, pageable).map(this::convertToJsonData);
-        } else if (startDateTime != null) {
-            return jsonDocRepository.findByCreatedAtGreaterThanEqual(startDateTime, pageable).map(this::convertToJsonData);
-        } else if (endDateTime != null) {
-            return jsonDocRepository.findByCreatedAtLessThanEqual(endDateTime, pageable).map(this::convertToJsonData);
-        } else {
-            return jsonDocRepository.findAll(pageable).map(this::convertToJsonData);
-        }
+        return jsonDocRepository.findByCriteria(startDateTime, endDateTime, contentFilter, pageable)
+                .map(this::convertToJsonData);
     }
 
     public List<TradeDetailsDto> getTradeDetailsByClientReference(String clientReferenceNumber) {
@@ -111,9 +104,9 @@ public class DatabaseStorageService {
                 .orElse(Collections.emptyList());
     }
 
-    public Page<JsonData> getDataByDateRangeForUser(LocalDate startDate, LocalDate endDate, String username, Pageable pageable) {
+    public Page<JsonData> getDataByDateRangeForUser(LocalDate startDate, LocalDate endDate, String username, String contentFilter, Pageable pageable) {
         log.warn("getDataByDateRangeForUser is not filtering by fund entitlement as json_docs has no fund_number. Returning all data.");
-        return getDataByDateRange(startDate, endDate, pageable);
+        return getDataByDateRange(startDate, endDate, contentFilter, pageable);
     }
 
     public List<TradeDetailsDto> getTradeDetailsForUser(String clientReferenceNumber, String username, LocalDate startDate, LocalDate endDate) {

@@ -73,7 +73,7 @@ class JsonDataControllerTest {
         List<JsonData> allData = Collections.singletonList(jsonData);
         Page<JsonData> pageData = new PageImpl<>(allData);
 
-        given(databaseStorageService.getDataByDateRangeForUser(any(), any(), anyString(), any(Pageable.class))).willReturn(pageData);
+        given(databaseStorageService.getDataByDateRangeForUser(any(), any(), anyString(), eq(null), any(Pageable.class))).willReturn(pageData);
 
         String startDate = "2023-01-01T00:00:00";
         String endDate = "2023-01-31T23:59:59";
@@ -85,6 +85,36 @@ class JsonDataControllerTest {
                         .header("Authorization", AUTH_TOKEN)
                         .param("startDate", startDate)
                         .param("endDate", endDate))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.data.content", hasSize(1)))
+                .andExpect(jsonPath("$.data.content[0].id", is(1)))
+                .andExpect(jsonPath("$.data.content[0].messageKey", is(key)))
+                .andExpect(jsonPath("$.data.content[0].jsonData", is("{\"test\":\"data\"}")));
+    }
+
+    @Test
+    void whenGetDataWithContentFilter_thenReturnPageOfJsonData() throws Exception {
+        // Given
+        LocalDateTime now = LocalDateTime.now();
+        String key = UUID.randomUUID().toString();
+        JsonData jsonData = new JsonData(1L, key, "{\"test\":\"data\"}", now);
+        List<JsonData> allData = Collections.singletonList(jsonData);
+        Page<JsonData> pageData = new PageImpl<>(allData);
+
+        given(databaseStorageService.getDataByDateRangeForUser(any(), any(), anyString(), eq("test"), any(Pageable.class))).willReturn(pageData);
+
+        String startDate = "2023-01-01T00:00:00";
+        String endDate = "2023-01-31T23:59:59";
+
+        // When & Then
+        mockMvc.perform(get("/api/data")
+                        .header("X-Correlation-ID", CORRELATION_ID)
+                        .header("X-Source-Application-ID", SOURCE_APP_ID)
+                        .header("Authorization", AUTH_TOKEN)
+                        .param("startDate", startDate)
+                        .param("endDate", endDate)
+                        .param("contentFilter", "test"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success", is(true)))
                 .andExpect(jsonPath("$.data.content", hasSize(1)))

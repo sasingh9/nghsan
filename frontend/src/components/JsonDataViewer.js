@@ -18,6 +18,7 @@ const style = {
 const JsonDataViewer = () => {
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
+    const [contentFilter, setContentFilter] = useState('');
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -66,6 +67,9 @@ const JsonDataViewer = () => {
                 startDate: new Date(startDate).toISOString(),
                 endDate: new Date(endDate).toISOString(),
             };
+            if (contentFilter) {
+                params.contentFilter = contentFilter;
+            }
             const response = await axios.get('/api/data', { params });
             if (response.data && response.data.success) {
                 setData(response.data.data.content);
@@ -96,6 +100,12 @@ const JsonDataViewer = () => {
                     type="datetime-local"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                />
+                <TextField
+                    label="Content Filter"
+                    value={contentFilter}
+                    onChange={(e) => setContentFilter(e.target.value)}
                     InputLabelProps={{ shrink: true }}
                 />
                 <Button onClick={fetchData} disabled={loading} variant="contained">

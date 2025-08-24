@@ -59,6 +59,7 @@ public class JsonDataController {
     public ResponseEntity<ApiResponse<Page<JsonData>>> getData(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
+            @RequestParam(required = false) String contentFilter,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "100") int size) {
 
@@ -80,6 +81,7 @@ public class JsonDataController {
             startDate != null ? startDate.toLocalDate() : null,
             endDate != null ? endDate.toLocalDate() : null,
             username,
+            contentFilter,
             pageable
         );
         return ResponseEntity.ok(new ApiResponse<>(true, "Data retrieved successfully", data));
