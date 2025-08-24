@@ -15,7 +15,7 @@ const style = {
 };
 
 function TradeExceptionInquiry() {
-    const [clientReference, setClientReference] = useState('');
+    const [clientRef, setClientRef] = useState('');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [exceptions, setExceptions] = useState([]);
@@ -53,26 +53,32 @@ function TradeExceptionInquiry() {
 
     const handleSubmit = async (event) => {
         event.preventDefault();
-        setLoading(true);
-        setError('');
-        setExceptions([]);
+        const hasClientRef = clientRef.trim();
+        const hasDateRange = startDate && endDate;
 
-        if (!clientReference) {
-            setError('Please enter a Client Reference Number.');
-            setLoading(false);
+        if (!hasClientRef && !hasDateRange) {
+            setError('Please enter a Client Reference Number or select a date range.');
+            return;
+        }
+        if (hasDateRange && new Date(startDate) >= new Date(endDate)) {
+            setError('Start date must be before end date.');
             return;
         }
 
+        setLoading(true);
+        setError(null);
+
         try {
             const params = new URLSearchParams();
-            if (startDate) {
-                params.append('startDate', new Date(startDate).toISOString());
+            if (hasClientRef) {
+                params.append('clientReferenceNumber', clientRef);
             }
-            if (endDate) {
-                params.append('endDate', new Date(endDate).toISOString());
+            if (hasDateRange) {
+                params.append('startDate', new Date(startDate).toISOString().slice(0, 16));
+                params.append('endDate', new Date(endDate).toISOString().slice(0, 16));
             }
 
-            const response = await fetch(`/api/exceptions/${clientReference}?${params.toString()}`, {
+            const response = await fetch(`/api/exceptions?${params.toString()}`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json'
@@ -87,7 +93,7 @@ function TradeExceptionInquiry() {
             }
         } catch (e) {
             setError('Failed to fetch trade exceptions. ' + e.message);
-            console.error(e);
+            setExceptions([]);
         } finally {
             setLoading(false);
         }
@@ -99,8 +105,8 @@ function TradeExceptionInquiry() {
             <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 2 }}>
                 <TextField
                     label="Client Reference Number"
-                    value={clientReference}
-                    onChange={(e) => setClientReference(e.target.value)}
+                    value={clientRef}
+                    onChange={(e) => setClientRef(e.target.value)}
                     variant="outlined"
                     size="small"
                     sx={{ minWidth: '240px' }}
@@ -122,7 +128,7 @@ function TradeExceptionInquiry() {
                     size="small"
                 />
                 <Button type="submit" disabled={loading} variant="contained">
-                    {loading ? 'Loading...' : 'Fetch Exceptions'}
+                    {loading ? 'Loading...' : 'Search'}
                 </Button>
             </Box>
 
@@ -135,6 +141,14 @@ function TradeExceptionInquiry() {
                     pageSize={10}
                     rowsPerPageOptions={[10]}
                     loading={loading}
+                    getRowId={(row) => row.id}
+                    slots={{
+                      noRowsOverlay: () => (
+                        <Box sx={{ p: 2, textAlign: 'center' }}>
+                          <Typography>No exceptions found.</Typography>
+                        </Box>
+                      ),
+                    }}
                 />
             </div>
             <Modal

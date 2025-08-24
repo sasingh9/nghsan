@@ -24,36 +24,51 @@ const TradeInquiry = () => {
 
     const handleSubmit = async (event) => {
         event.preventDefault();
-        if (!clientRef.trim()) {
-            setError('Please enter a Client Reference Number.');
+        const hasClientRef = clientRef.trim();
+        const hasDateRange = startDate && endDate;
+
+        if (!hasClientRef && !hasDateRange) {
+            setError('Please enter a Client Reference Number or select a date range.');
             return;
         }
+        if (hasDateRange && new Date(startDate) >= new Date(endDate)) {
+            setError('Start date must be before end date.');
+            return;
+        }
+
         setLoading(true);
         setError(null);
+
         try {
             const params = new URLSearchParams();
-            if (startDate) {
-                params.append('startDate', new Date(startDate).toISOString());
+            if (hasClientRef) {
+                params.append('clientReferenceNumber', clientRef);
             }
-            if (endDate) {
-                params.append('endDate', new Date(endDate).toISOString());
+            if (hasDateRange) {
+                // Format to yyyy-MM-ddTHH:mm which the backend expects
+                params.append('startDate', new Date(startDate).toISOString().slice(0, 16));
+                params.append('endDate', new Date(endDate).toISOString().slice(0, 16));
             }
 
-            const response = await fetch(`/api/trades/${clientRef}?${params.toString()}`, {
+            const response = await fetch(`/api/trades?${params.toString()}`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 credentials: 'include'
             });
+
             const data = await response.json();
             if (response.ok && data.success) {
-                setTrades(data.data);
+                // Add a unique id to each row for the DataGrid
+                const tradesWithIds = data.data.map((trade, index) => ({ ...trade, id: index }));
+                setTrades(tradesWithIds);
             } else {
                 throw new Error(data.message || 'Network response was not ok');
             }
         } catch (error) {
             setError(error.message);
+            setTrades([]);
         } finally {
             setLoading(false);
         }
@@ -99,7 +114,14 @@ const TradeInquiry = () => {
                     pageSize={10}
                     rowsPerPageOptions={[10]}
                     loading={loading}
-                    getRowId={(row) => row.clientReferenceNumber + row.fundNumber + row.securityId} // Assuming this combination is unique
+                    getRowId={(row) => row.id}
+                    slots={{
+                      noRowsOverlay: () => (
+                        <Box sx={{ p: 2, textAlign: 'center' }}>
+                          <Typography>No trades found.</Typography>
+                        </Box>
+                      ),
+                    }}
                 />
             </div>
         </div>

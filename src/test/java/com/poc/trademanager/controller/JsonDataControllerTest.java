@@ -23,6 +23,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
@@ -122,16 +123,17 @@ class JsonDataControllerTest {
 
 
     @Test
-    void whenGetTradesByClientReference_thenReturnJsonArray() throws Exception {
+    void whenGetTrades_thenReturnJsonArray() throws Exception {
         // Given
         TradeDetailsDto tradeDetailsDto = new TradeDetailsDto();
         tradeDetailsDto.setClientReferenceNumber("CLIENT-001");
         List<TradeDetailsDto> tradeDetailsList = Collections.singletonList(tradeDetailsDto);
 
-        given(databaseStorageService.getTradeDetailsByClientReferenceForUser(anyString(), anyString(), any(), any())).willReturn(tradeDetailsList);
+        given(databaseStorageService.getTradeDetails(anyString(), any(Date.class), any(Date.class))).willReturn(tradeDetailsList);
 
         // When & Then
-        mockMvc.perform(get("/api/trades/CLIENT-001")
+        mockMvc.perform(get("/api/trades")
+                        .param("clientReferenceNumber", "CLIENT-001")
                         .header("X-Correlation-ID", CORRELATION_ID)
                         .header("X-Source-Application-ID", SOURCE_APP_ID)
                         .header("Authorization", AUTH_TOKEN))
@@ -142,16 +144,17 @@ class JsonDataControllerTest {
     }
 
     @Test
-    void whenGetExceptionsByClientReference_thenReturnJsonArray() throws Exception {
+    void whenGetExceptions_thenReturnJsonArray() throws Exception {
         // Given
         LocalDateTime now = LocalDateTime.now();
         TradeExceptionData exceptionData = new TradeExceptionData(1L, "CLIENT-001", "{\"bad\":\"data\"}", "Invalid trade date", ErrorType.BUSINESS, now);
         List<TradeExceptionData> allExceptions = Collections.singletonList(exceptionData);
 
-        given(databaseStorageService.getTradeExceptionsByClientReferenceForUser(anyString(), anyString(), any(), any())).willReturn(allExceptions);
+        given(databaseStorageService.getTradeExceptions(anyString(), any(Date.class), any(Date.class))).willReturn(allExceptions);
 
         // When & Then
-        mockMvc.perform(get("/api/exceptions/CLIENT-001")
+        mockMvc.perform(get("/api/exceptions")
+                        .param("clientReferenceNumber", "CLIENT-001")
                         .header("X-Correlation-ID", CORRELATION_ID)
                         .header("X-Source-Application-ID", SOURCE_APP_ID)
                         .header("Authorization", AUTH_TOKEN))

@@ -116,17 +116,25 @@ public class DatabaseStorageService {
         return getDataByDateRange(startDate, endDate, pageable);
     }
 
-    public List<TradeDetailsDto> getTradeDetailsByClientReferenceForUser(String clientReferenceNumber, String username, LocalDateTime startDate, LocalDateTime endDate) {
+    public List<TradeDetailsDto> getTradeDetailsForUser(String clientReferenceNumber, String username, LocalDateTime startDate, LocalDateTime endDate) {
         List<String> entitledFunds = getEntitledFundNumbers(username);
         if (entitledFunds.isEmpty()) {
             return Collections.emptyList();
         }
 
         List<TradeDetail> trades;
-        if (startDate != null && endDate != null) {
+        boolean hasClientRef = clientReferenceNumber != null && !clientReferenceNumber.trim().isEmpty();
+        boolean hasDateRange = startDate != null && endDate != null;
+
+        if (hasClientRef && hasDateRange) {
             trades = tradeDetailRepository.findByClientReferenceNumberAndFundNumberInAndTradeDateBetween(clientReferenceNumber, entitledFunds, startDate, endDate);
-        } else {
+        } else if (hasClientRef) {
             trades = tradeDetailRepository.findByClientReferenceNumberAndFundNumberIn(clientReferenceNumber, entitledFunds);
+        } else if (hasDateRange) {
+            trades = tradeDetailRepository.findByFundNumberInAndTradeDateBetween(entitledFunds, startDate, endDate);
+        } else {
+            // Should be prevented by controller, but as a safeguard:
+            trades = Collections.emptyList();
         }
 
         return trades.stream()
@@ -134,14 +142,27 @@ public class DatabaseStorageService {
                 .collect(Collectors.toList());
     }
 
-    public List<TradeExceptionData> getTradeExceptionsByClientReferenceForUser(String clientReferenceNumber, String username, LocalDateTime startDate, LocalDateTime endDate) {
-        log.warn("getTradeExceptionsByClientReferenceForUser is not filtering by fund entitlement. This is a design decision.");
-        if (startDate != null && endDate != null) {
-            return tradeExceptionRepository.findByClientReferenceNumberAndCreatedAtBetween(clientReferenceNumber, startDate, endDate).stream()
-                    .map(this::convertToTradeExceptionData)
-                    .collect(Collectors.toList());
+    public List<TradeExceptionData> getTradeExceptionsForUser(String clientReferenceNumber, String username, LocalDateTime startDate, LocalDateTime endDate) {
+        log.warn("getTradeExceptionsForUser is not filtering by fund entitlement. This is a design decision.");
+
+        List<TradeException> exceptions;
+        boolean hasClientRef = clientReferenceNumber != null && !clientReferenceNumber.trim().isEmpty();
+        boolean hasDateRange = startDate != null && endDate != null;
+
+        if (hasClientRef && hasDateRange) {
+            exceptions = tradeExceptionRepository.findByClientReferenceNumberAndCreatedAtBetween(clientReferenceNumber, startDate, endDate);
+        } else if (hasClientRef) {
+            exceptions = tradeExceptionRepository.findByClientReferenceNumber(clientReferenceNumber);
+        } else if (hasDateRange) {
+            exceptions = tradeExceptionRepository.findByCreatedAtBetween(startDate, endDate);
+        } else {
+            // Should be prevented by controller, but as a safeguard:
+            exceptions = Collections.emptyList();
         }
-        return getTradeExceptionsByClientReference(clientReferenceNumber);
+
+        return exceptions.stream()
+                .map(this::convertToTradeExceptionData)
+                .collect(Collectors.toList());
     }
 
     private JsonData convertToJsonData(JsonDoc jsonDoc) {

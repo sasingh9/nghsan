@@ -12,4 +12,5 @@ public interface TradeExceptionRepository extends JpaRepository<TradeException, 
     boolean existsByClientReferenceNumber(String clientReferenceNumber);
     List<TradeException> findByClientReferenceNumber(String clientReferenceNumber);
     List<TradeException> findByClientReferenceNumberAndCreatedAtBetween(String clientReferenceNumber, LocalDateTime startDate, LocalDateTime endDate);
+    List<TradeException> findByCreatedAtBetween(LocalDateTime startDate, LocalDateTime endDate);
 }
