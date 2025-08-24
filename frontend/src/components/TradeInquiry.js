@@ -146,7 +146,6 @@ const TradeInquiry = () => {
                     size="small"
                 />
                 <Button type="submit" variant="contained">Search</Button>
-                <Button variant="contained" color="secondary" onClick={handleExport}>Export to Excel</Button>
             </Box>
 
             {error && <Typography color="error">{error}</Typography>}
@@ -168,6 +167,9 @@ const TradeInquiry = () => {
                     }}
                 />
             </div>
+            <Box sx={{ mt: 2 }}>
+                <Button variant="contained" onClick={handleExport}>Export to Excel</Button>
+            </Box>
 
             <Modal
                 open={isModalOpen}
