@@ -169,7 +169,7 @@ const FundMaster = () => {
     };
 
     const handleSave = async (fundData) => {
-        const isEdit = !!fundData.fundID;
+        const isEdit = !!currentFund; // Use currentFund to determine if it's an edit operation
         const url = isEdit ? `/api/funds/${fundData.fundID}` : '/api/funds';
         const method = isEdit ? 'put' : 'post';
 
