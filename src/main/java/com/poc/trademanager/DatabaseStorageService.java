@@ -117,11 +117,19 @@ public class DatabaseStorageService {
     }
 
     public List<TradeDetailsDto> getTradeDetailsByClientReferenceForUser(String clientReferenceNumber, String username) {
+        log.info("Fetching trades for user '{}' with client reference '{}'", username, clientReferenceNumber);
         List<String> entitledFunds = getEntitledFundNumbers(username);
+        log.info("User '{}' has entitlements for funds: {}", username, entitledFunds);
+
         if (entitledFunds.isEmpty()) {
+            log.warn("User '{}' has no entitled funds. Returning empty list.", username);
             return Collections.emptyList();
         }
-        return tradeDetailRepository.findByClientReferenceNumberAndFundNumberIn(clientReferenceNumber, entitledFunds).stream()
+
+        List<TradeDetail> trades = tradeDetailRepository.findByClientReferenceNumberAndFundNumberIn(clientReferenceNumber, entitledFunds);
+        log.info("Found {} trades for user '{}' with client reference '{}' and funds {}", trades.size(), username, clientReferenceNumber, entitledFunds);
+
+        return trades.stream()
                 .map(this::convertToTradeDetailsDto)
                 .collect(Collectors.toList());
     }
