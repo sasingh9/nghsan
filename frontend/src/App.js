@@ -13,17 +13,19 @@ import {
     Toolbar,
     Typography
 } from '@mui/material';
-import { BarChart as BarChartIcon, Inbox as InboxIcon, Mail as MailIcon, Assessment as AssessmentIcon } from '@mui/icons-material';
+import { BarChart as BarChartIcon, Inbox as InboxIcon, Mail as MailIcon, Assessment as AssessmentIcon, AccountBalanceWallet as AccountBalanceWalletIcon } from '@mui/icons-material';
 
 import JsonDataViewer from './components/JsonDataViewer';
 import TradeInquiry from './components/TradeInquiry';
 import TradeExceptionInquiry from './components/TradeExceptionInquiry';
 import SummaryPage from './components/SummaryPage';
+import FundMaster from './components/FundMaster';
 
 const drawerWidth = 240;
 
 const navItems = [
     { text: 'Summary', path: '/', icon: <BarChartIcon /> },
+    { text: 'Fund Master', path: '/fund-master', icon: <AccountBalanceWalletIcon /> },
     { text: 'JSON Data Viewer', path: '/json-data-viewer', icon: <AssessmentIcon /> },
     { text: 'Trade Inquiry', path: '/trade-inquiry', icon: <InboxIcon /> },
     { text: 'Trade Exceptions Inquiry', path: '/trade-exception-inquiry', icon: <MailIcon /> },
@@ -69,6 +71,7 @@ function App() {
                     <Toolbar />
                     <Routes>
                         <Route path="/" element={<SummaryPage />} />
+                        <Route path="/fund-master" element={<FundMaster />} />
                         <Route path="/json-data-viewer" element={<JsonDataViewer />} />
                         <Route path="/trade-inquiry" element={<TradeInquiry />} />
                         <Route path="/trade-exception-inquiry" element={<TradeExceptionInquiry />} />
