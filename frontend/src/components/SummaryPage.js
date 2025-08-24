@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { Typography, Paper, CircularProgress, Alert } from '@mui/material';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
@@ -10,21 +9,32 @@ const SummaryPage = () => {
 
     useEffect(() => {
         const fetchSummaryData = async () => {
+            setLoading(true);
             try {
-                setLoading(true);
-                const response = await axios.get('/api/summary/trades-by-fund', {
-                    withCredentials: true,
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
+                const response = await fetch('/api/summary/trades-by-fund', {
+                    credentials: 'include'
                 });
-                if (response.data && response.data.success) {
-                    setSummaryData(response.data.data);
+
+                if (response.status === 401) {
+                    // Let the browser's basic auth prompt handle it.
+                    // We can optionally set an error message.
+                    setError('Please log in to view the summary.');
+                    return; // Stop processing
+                }
+
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+
+                const data = await response.json();
+                if (data && data.success) {
+                    setSummaryData(data.data);
+                    setError(null); // Clear previous errors
                 } else {
-                    setError(response.data.message || 'Failed to fetch summary data.');
+                    setError(data.message || 'Failed to fetch summary data.');
                 }
             } catch (err) {
-                setError('Failed to fetch summary data. Make sure the backend is running.');
+                setError(err.message || 'Failed to fetch summary data. Make sure the backend is running.');
                 console.error(err);
             } finally {
                 setLoading(false);

@@ -6,7 +6,6 @@ import {
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import axios from 'axios';
 
 // Helper to format date for input fields
 const formatDateForInput = (dateString) => {
@@ -144,11 +143,17 @@ const FundMaster = () => {
     const fetchFunds = async () => {
         setLoading(true);
         try {
-            const response = await axios.get('/api/funds');
-            setFunds(response.data);
+            const response = await fetch('/api/funds', { credentials: 'include' });
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            const data = await response.json();
+            setFunds(data);
+            setError(null);
         } catch (err) {
-            setError('Failed to fetch funds.');
-            setSnackbar({ open: true, message: 'Failed to fetch funds.', severity: 'error' });
+            const errorMsg = err.message || 'Failed to fetch funds.';
+            setError(errorMsg);
+            setSnackbar({ open: true, message: errorMsg, severity: 'error' });
         } finally {
             setLoading(false);
         }
@@ -169,16 +174,29 @@ const FundMaster = () => {
     };
 
     const handleSave = async (fundData) => {
-        const isEdit = !!currentFund; // Use currentFund to determine if it's an edit operation
+        const isEdit = !!currentFund;
         const url = isEdit ? `/api/funds/${fundData.fundID}` : '/api/funds';
-        const method = isEdit ? 'put' : 'post';
+        const method = isEdit ? 'PUT' : 'POST';
 
         try {
-            await axios[method](url, fundData);
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(fundData),
+                credentials: 'include',
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ message: 'An unknown error occurred.' }));
+                throw new Error(errorData.message || `Request failed with status ${response.status}`);
+            }
+
             setSnackbar({ open: true, message: `Fund ${isEdit ? 'updated' : 'created'} successfully!`, severity: 'success' });
             fetchFunds(); // Refresh data
         } catch (err) {
-            setSnackbar({ open: true, message: `Error: ${err.response?.data?.message || 'An error occurred.'}`, severity: 'error' });
+            setSnackbar({ open: true, message: `Error: ${err.message}`, severity: 'error' });
         } finally {
             handleCloseDialog();
         }
@@ -187,11 +205,20 @@ const FundMaster = () => {
     const handleDelete = async (id) => {
         if (window.confirm('Are you sure you want to delete this fund?')) {
             try {
-                await axios.delete(`/api/funds/${id}`);
+                const response = await fetch(`/api/funds/${id}`, {
+                    method: 'DELETE',
+                    credentials: 'include',
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ message: 'An unknown error occurred.' }));
+                    throw new Error(errorData.message || `Request failed with status ${response.status}`);
+                }
+
                 setSnackbar({ open: true, message: 'Fund deleted successfully!', severity: 'success' });
                 fetchFunds(); // Refresh data
             } catch (err) {
-                setSnackbar({ open: true, message: 'Failed to delete fund.', severity: 'error' });
+                setSnackbar({ open: true, message: `Error: ${err.message}`, severity: 'error' });
             }
         }
     };
