@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { DataGrid } from '@mui/x-data-grid';
 import { Button, TextField, Typography, Box, Modal, Paper } from '@mui/material';
+import * as XLSX from 'xlsx';
 
 const safeFormatJson = (jsonString) => {
     if (!jsonString) return 'No JSON data available.';
@@ -30,6 +31,13 @@ const TradeInquiry = () => {
     const handleCloseModal = () => {
         setIsModalOpen(false);
         setSelectedJson(null);
+    };
+
+    const handleExport = () => {
+        const worksheet = XLSX.utils.json_to_sheet(trades);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Trades");
+        XLSX.writeFile(workbook, "TradeData.xlsx");
     };
 
     const columns = [
@@ -138,6 +146,7 @@ const TradeInquiry = () => {
                     size="small"
                 />
                 <Button type="submit" variant="contained">Search</Button>
+                <Button variant="contained" color="secondary" onClick={handleExport}>Export to Excel</Button>
             </Box>
 
             {error && <Typography color="error">{error}</Typography>}
