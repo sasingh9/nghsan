@@ -15,6 +15,16 @@ const style = {
     p: 4,
 };
 
+const safeFormatJson = (jsonString) => {
+    if (!jsonString) return 'No JSON data available.';
+    try {
+        const parsed = JSON.parse(jsonString);
+        return JSON.stringify(parsed, null, 2);
+    } catch (error) {
+        return jsonString; // Return raw string if parsing fails
+    }
+};
+
 const JsonDataViewer = () => {
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
@@ -133,7 +143,7 @@ const JsonDataViewer = () => {
                         JSON Data
                     </Typography>
                     <pre id="modal-description" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-                        {selectedJson ? JSON.stringify(JSON.parse(selectedJson), null, 2) : ''}
+                        {safeFormatJson(selectedJson)}
                     </pre>
                 </Paper>
             </Modal>

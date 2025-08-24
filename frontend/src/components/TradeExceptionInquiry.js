@@ -2,6 +2,16 @@ import React, { useState } from 'react';
 import { DataGrid } from '@mui/x-data-grid';
 import { Button, TextField, Typography, Box, Modal, Paper } from '@mui/material';
 
+const safeFormatJson = (jsonString) => {
+    if (!jsonString) return 'No JSON data available.';
+    try {
+        const parsed = JSON.parse(jsonString);
+        return JSON.stringify(parsed, null, 2);
+    } catch (error) {
+        return jsonString; // Return raw string if parsing fails
+    }
+};
+
 const style = {
     position: 'absolute',
     top: '50%',
@@ -162,7 +172,7 @@ function TradeExceptionInquiry() {
                         Failed Trade JSON
                     </Typography>
                     <pre id="modal-description" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-                        {selectedJson ? JSON.stringify(JSON.parse(selectedJson), null, 2) : ''}
+                        {safeFormatJson(selectedJson)}
                     </pre>
                 </Paper>
             </Modal>
