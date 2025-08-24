@@ -1,8 +1,9 @@
 package com.poc.trademanager.config;
 
-import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.clients.admin.NewTopic;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.annotation.EnableKafka;
@@ -22,17 +23,20 @@ public class KafkaConfig {
 
     private static final Logger log = LoggerFactory.getLogger(KafkaConfig.class);
 
+    @Value("${app.kafka.topic.json-input-dlq}")
+    private String dlqTopicName;
+
     @Bean
     public CommonErrorHandler errorHandler(KafkaTemplate<String, String> template) {
-        DefaultErrorHandler errorHandler = new DefaultErrorHandler((consumerRecord, exception) -> {
-            // Logic to execute when all retries have failed.
-            log.error("Kafka message consumption failed for record: {}. Exception: {}", consumerRecord, exception.getMessage());
-            // Here you could add logic to send to a dead-letter queue (DLQ)
-        }, new FixedBackOff(1000L, 2L)); // 1-second interval, 2 retries
+        DeadLetterPublishingRecoverer recoverer = new DeadLetterPublishingRecoverer(template,
+                (record, ex) -> {
+                    log.error("Message failed after retries. Sending to DLQ. Topic: {}, Partition: {}, Offset: {}",
+                            record.topic(), record.partition(), record.offset(), ex);
+                    return new org.apache.kafka.common.TopicPartition(dlqTopicName, record.partition());
+                });
 
-        // Don't retry for deserialization exceptions
+        DefaultErrorHandler errorHandler = new DefaultErrorHandler(recoverer, new FixedBackOff(1000L, 2L));
         errorHandler.addNotRetryableExceptions(DeserializationException.class);
-
         return errorHandler;
     }
 
@@ -45,5 +49,10 @@ public class KafkaConfig {
         factory.setCommonErrorHandler(errorHandler);
         factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL);
         return factory;
+    }
+
+    @Bean
+    public NewTopic dlt() {
+        return new NewTopic(dlqTopicName, 1, (short) 1);
     }
 }
