@@ -12,7 +12,7 @@ const SummaryPage = () => {
         const fetchSummaryData = async () => {
             try {
                 setLoading(true);
-                const response = await axios.get('/api/summary/trades-by-fund');
+                const response = await axios.get('/api/summary/trades-by-fund', { withCredentials: true });
                 if (response.data && response.data.success) {
                     setSummaryData(response.data.data);
                 } else {
