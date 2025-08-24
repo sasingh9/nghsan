@@ -16,4 +16,5 @@ public class TradeDetailsDto {
     private BigDecimal price;
     private BigDecimal principal;
     private BigDecimal netAmount;
+    private String baseCurrency;
 }

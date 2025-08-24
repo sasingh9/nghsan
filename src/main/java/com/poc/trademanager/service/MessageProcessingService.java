@@ -2,9 +2,11 @@ package com.poc.trademanager.service;
 
 import com.poc.trademanager.dto.ErrorType;
 import com.poc.trademanager.dto.TradeDetailsDto;
+import com.poc.trademanager.entity.Fund;
 import com.poc.trademanager.entity.JsonDoc;
 import com.poc.trademanager.entity.TradeDetail;
 import com.poc.trademanager.entity.TradeException;
+import com.poc.trademanager.repository.FundRepository;
 import com.poc.trademanager.repository.TradeDetailRepository;
 import com.poc.trademanager.repository.TradeExceptionRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -23,6 +25,7 @@ import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class MessageProcessingService {
@@ -33,15 +36,17 @@ public class MessageProcessingService {
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final TradeDetailRepository tradeDetailRepository;
     private final TradeExceptionRepository tradeExceptionRepository;
+    private final FundRepository fundRepository;
 
     @Value("${app.kafka.topic.json-output}")
     private String outputTopic;
 
-    public MessageProcessingService(ObjectMapper objectMapper, KafkaTemplate<String, String> kafkaTemplate, TradeDetailRepository tradeDetailRepository, TradeExceptionRepository tradeExceptionRepository) {
+    public MessageProcessingService(ObjectMapper objectMapper, KafkaTemplate<String, String> kafkaTemplate, TradeDetailRepository tradeDetailRepository, TradeExceptionRepository tradeExceptionRepository, FundRepository fundRepository) {
         this.objectMapper = objectMapper;
         this.kafkaTemplate = kafkaTemplate;
         this.tradeDetailRepository = tradeDetailRepository;
         this.tradeExceptionRepository = tradeExceptionRepository;
+        this.fundRepository = fundRepository;
     }
 
     @Async("asyncTaskExecutor")
@@ -61,6 +66,15 @@ public class MessageProcessingService {
 
             if (isDuplicate(tradeDetailsDto.getClientReferenceNumber())) {
                 log.warn("Duplicate trade detected with client reference number: {}. Skipping processing.", tradeDetailsDto.getClientReferenceNumber());
+                return;
+            }
+
+            // Enrich with fund base currency
+            Optional<Fund> fundOptional = fundRepository.findById(tradeDetailsDto.getFundNumber());
+            if (fundOptional.isPresent()) {
+                tradeDetailsDto.setBaseCurrency(fundOptional.get().getBaseCurrency());
+            } else {
+                saveException(tradeDetailsDto, jsonMessage, List.of("Fund not found"));
                 return;
             }
 
