@@ -1,95 +1,81 @@
-import React, { useState } from 'react';
-import axios from 'axios';
-import './App.css';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Link as RouterLink } from 'react-router-dom';
+import {
+    AppBar,
+    Box,
+    CssBaseline,
+    Drawer,
+    List,
+    ListItem,
+    ListItemButton,
+    ListItemIcon,
+    ListItemText,
+    Toolbar,
+    Typography
+} from '@mui/material';
+import { BarChart as BarChartIcon, Inbox as InboxIcon, Mail as MailIcon, Assessment as AssessmentIcon } from '@mui/icons-material';
+
+import JsonDataViewer from './components/JsonDataViewer';
 import TradeInquiry from './components/TradeInquiry';
 import TradeExceptionInquiry from './components/TradeExceptionInquiry';
+import SummaryPage from './components/SummaryPage';
+
+const drawerWidth = 240;
+
+const navItems = [
+    { text: 'Summary', path: '/', icon: <BarChartIcon /> },
+    { text: 'JSON Data Viewer', path: '/json-data-viewer', icon: <AssessmentIcon /> },
+    { text: 'Trade Inquiry', path: '/trade-inquiry', icon: <InboxIcon /> },
+    { text: 'Trade Exceptions Inquiry', path: '/trade-exception-inquiry', icon: <MailIcon /> },
+];
 
 function App() {
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
-    const [data, setData] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
-
-    const fetchData = async () => {
-        setLoading(true);
-        setError('');
-        setData([]);
-
-        // Basic validation
-        if (!startDate || !endDate) {
-            setError('Please select both a start and end date.');
-            setLoading(false);
-            return;
-        }
-
-        try {
-            const params = {
-                startDate: new Date(startDate).toISOString(),
-                endDate: new Date(endDate).toISOString(),
-            };
-            const response = await axios.get('/api/data', { params });
-            setData(response.data);
-        } catch (err) {
-            setError('Failed to fetch data. Make sure the backend is running.');
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
     return (
-        <div className="App">
-            <header className="App-header">
-                <h1>JSON Data Viewer</h1>
-            </header>
-            <main>
-                <div className="filter-container">
-                    <div className="date-picker">
-                        <label>Start Date:</label>
-                        <input
-                            type="datetime-local"
-                            value={startDate}
-                            onChange={(e) => setStartDate(e.target.value)}
-                        />
-                    </div>
-                    <div className="date-picker">
-                        <label>End Date:</label>
-                        <input
-                            type="datetime-local"
-                            value={endDate}
-                            onChange={(e) => setEndDate(e.target.value)}
-                        />
-                    </div>
-                    <button onClick={fetchData} disabled={loading}>
-                        {loading ? 'Loading...' : 'Fetch Data'}
-                    </button>
-                </div>
-                {error && <p className="error-message">{error}</p>}
-                <div className="data-container">
-                    {data.length > 0 ? (
-                        data.map((item) => (
-                            <div key={item.id} className="data-item">
-                                <h3>Record ID: {item.id}</h3>
-                                <p><strong>Message Key:</strong> {item.messageKey}</p>
-                                <p><strong>Created At:</strong> {new Date(item.createdAt).toLocaleString()}</p>
-                                <pre>{JSON.stringify(JSON.parse(item.jsonData), null, 2)}</pre>
-                            </div>
-                        ))
-                    ) : (
-                        <p>{!loading && 'No data to display. Adjust the filter and click "Fetch Data".'}</p>
-                    )}
-                </div>
-
-                <hr style={{ margin: '2rem 0' }} />
-
-                <TradeInquiry />
-
-                <hr style={{ margin: '2rem 0' }} />
-
-                <TradeExceptionInquiry />
-            </main>
-        </div>
+        <Router>
+            <Box sx={{ display: 'flex' }}>
+                <CssBaseline />
+                <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
+                    <Toolbar>
+                        <Typography variant="h6" noWrap component="div">
+                            Trade Manager
+                        </Typography>
+                    </Toolbar>
+                </AppBar>
+                <Drawer
+                    variant="permanent"
+                    sx={{
+                        width: drawerWidth,
+                        flexShrink: 0,
+                        [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: 'border-box' },
+                    }}
+                >
+                    <Toolbar />
+                    <Box sx={{ overflow: 'auto' }}>
+                        <List>
+                            {navItems.map((item) => (
+                                <ListItem key={item.text} disablePadding>
+                                    <ListItemButton component={RouterLink} to={item.path}>
+                                        <ListItemIcon>
+                                            {item.icon}
+                                        </ListItemIcon>
+                                        <ListItemText primary={item.text} />
+                                    </ListItemButton>
+                                </ListItem>
+                            ))}
+                        </List>
+                    </Box>
+                </Drawer>
+                <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
+                    <Toolbar />
+                    <Routes>
+                        <Route path="/" element={<SummaryPage />} />
+                        <Route path="/json-data-viewer" element={<JsonDataViewer />} />
+                        <Route path="/trade-inquiry" element={<TradeInquiry />} />
+                        <Route path="/trade-exception-inquiry" element={<TradeExceptionInquiry />} />
+                    </Routes>
+                </Box>
+            </Box>
+        </Router>
     );
 }
 

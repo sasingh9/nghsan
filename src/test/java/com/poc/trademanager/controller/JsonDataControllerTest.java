@@ -10,12 +10,14 @@ import com.poc.trademanager.entity.JsonDoc;
 import com.poc.trademanager.service.MessageProcessingService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -28,7 +30,10 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -48,6 +53,12 @@ class JsonDataControllerTest {
     @MockBean
     private MessageProcessingService messageProcessingService;
 
+    @MockBean
+    private KafkaTemplate<String, String> kafkaTemplate;
+
+    @Value("${app.kafka.topic.json-input}")
+    private String topicName;
+
     private final String CORRELATION_ID = "test-correlation-id";
     private final String SOURCE_APP_ID = "test-app";
     private final String AUTH_TOKEN = "Bearer test-token";
@@ -64,8 +75,8 @@ class JsonDataControllerTest {
 
         given(databaseStorageService.getDataByDateRangeForUser(any(), any(), anyString(), any(Pageable.class))).willReturn(pageData);
 
-        String startDate = "2023-01-01";
-        String endDate = "2023-01-31";
+        String startDate = "2023-01-01T00:00:00";
+        String endDate = "2023-01-31T23:59:59";
 
         // When & Then
         mockMvc.perform(get("/api/data")
@@ -84,8 +95,8 @@ class JsonDataControllerTest {
 
     @Test
     void whenGetDataWithInvalidDateRange_thenBadRequest() throws Exception {
-        String startDate = "2023-02-01";
-        String endDate = "2023-01-01"; // End date is before start date
+        String startDate = "2023-02-01T00:00:00";
+        String endDate = "2023-01-01T23:59:59"; // End date is before start date
 
         mockMvc.perform(get("/api/data")
                         .header("X-Correlation-ID", CORRELATION_ID)
@@ -98,8 +109,8 @@ class JsonDataControllerTest {
 
     @Test
     void whenGetDataWithOver31Days_thenBadRequest() throws Exception {
-        String startDate = "2023-01-01";
-        String endDate = "2023-02-02"; // 32 days
+        String startDate = "2023-01-01T00:00:00";
+        String endDate = "2023-02-02T00:00:00"; // 32 days
 
         mockMvc.perform(get("/api/data")
                         .header("X-Correlation-ID", CORRELATION_ID)
@@ -112,16 +123,17 @@ class JsonDataControllerTest {
 
 
     @Test
-    void whenGetTradesByClientReference_thenReturnJsonArray() throws Exception {
+    void whenGetTrades_thenReturnJsonArray() throws Exception {
         // Given
         TradeDetailsDto tradeDetailsDto = new TradeDetailsDto();
         tradeDetailsDto.setClientReferenceNumber("CLIENT-001");
         List<TradeDetailsDto> tradeDetailsList = Collections.singletonList(tradeDetailsDto);
 
-        given(databaseStorageService.getTradeDetailsByClientReferenceForUser(anyString(), anyString())).willReturn(tradeDetailsList);
+        given(databaseStorageService.getTradeDetailsForUser(eq("CLIENT-001"), eq("test-user"), any(), any())).willReturn(tradeDetailsList);
 
         // When & Then
-        mockMvc.perform(get("/api/trades/CLIENT-001")
+        mockMvc.perform(get("/api/trades")
+                        .param("clientReferenceNumber", "CLIENT-001")
                         .header("X-Correlation-ID", CORRELATION_ID)
                         .header("X-Source-Application-ID", SOURCE_APP_ID)
                         .header("Authorization", AUTH_TOKEN))
@@ -132,16 +144,17 @@ class JsonDataControllerTest {
     }
 
     @Test
-    void whenGetExceptionsByClientReference_thenReturnJsonArray() throws Exception {
+    void whenGetExceptions_thenReturnJsonArray() throws Exception {
         // Given
         LocalDateTime now = LocalDateTime.now();
         TradeExceptionData exceptionData = new TradeExceptionData(1L, "CLIENT-001", "{\"bad\":\"data\"}", "Invalid trade date", ErrorType.BUSINESS, now);
         List<TradeExceptionData> allExceptions = Collections.singletonList(exceptionData);
 
-        given(databaseStorageService.getTradeExceptionsByClientReferenceForUser(anyString(), anyString())).willReturn(allExceptions);
+        given(databaseStorageService.getTradeExceptionsForUser(eq("CLIENT-001"), eq("test-user"), any(), any())).willReturn(allExceptions);
 
         // When & Then
-        mockMvc.perform(get("/api/exceptions/CLIENT-001")
+        mockMvc.perform(get("/api/exceptions")
+                        .param("clientReferenceNumber", "CLIENT-001")
                         .header("X-Correlation-ID", CORRELATION_ID)
                         .header("X-Source-Application-ID", SOURCE_APP_ID)
                         .header("Authorization", AUTH_TOKEN))
@@ -175,6 +188,38 @@ class JsonDataControllerTest {
     void whenProcessMessageManuallyWithInvalidRole_thenForbidden() throws Exception {
         String jsonMessage = "{\"valid\":\"json\"}";
         mockMvc.perform(post("/api/data")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonMessage)
+                        .header("X-Correlation-ID", CORRELATION_ID)
+                        .header("X-Source-Application-ID", SOURCE_APP_ID)
+                        .header("Authorization", AUTH_TOKEN))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "support-user", roles = {"SUPPORT"})
+    void whenPostMessageToKafkaWithValidRole_thenOk() throws Exception {
+        String jsonMessage = "{\"test\":\"message\"}";
+        mockMvc.perform(post("/api/messages")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonMessage)
+                        .header("X-Correlation-ID", CORRELATION_ID)
+                        .header("X-Source-Application-ID", SOURCE_APP_ID)
+                        .header("Authorization", AUTH_TOKEN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("Message sent successfully to Kafka.")));
+
+        verify(kafkaTemplate, times(1)).send(topicName, jsonMessage);
+    }
+
+    @Test
+    @WithMockUser(username = "test-user", roles = {"USER"})
+    void whenPostMessageToKafkaWithInvalidRole_thenForbidden() throws Exception {
+        String jsonMessage = "{\"test\":\"message\"}";
+        mockMvc.perform(post("/api/messages")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonMessage)

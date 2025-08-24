@@ -2,17 +2,26 @@ package com.poc.trademanager;
 
 import com.poc.trademanager.entity.JsonDoc;
 import com.poc.trademanager.repository.JsonDocRepository;
-import com.poc.trademanager.service.UniqueIdGenerator;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.test.autoconfigure.orm.jpa.AutoConfigureTestEntityManager;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
-import org.springframework.context.annotation.Import;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
+
+import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@DataJpaTest
-@Import({DatabaseStorageService.class, UniqueIdGenerator.class})
+@SpringBootTest
+@AutoConfigureTestEntityManager
+@ActiveProfiles("test")
+@TestPropertySource(properties = {
+        "app.kafka.topic.json-input=test-input-topic",
+        "app.kafka.topic.json-output=test-output-topic",
+        "spring.kafka.consumer.group-id=test-group"
+})
 class DatabaseStorageServiceTest {
 
     @Autowired
@@ -25,6 +34,7 @@ class DatabaseStorageServiceTest {
     private JsonDocRepository jsonDocRepository;
 
     @Test
+    @Transactional
     void testSaveRawMessage() {
         // Given
         String jsonMessage = "{\"test_key\":\"test_value\"}";

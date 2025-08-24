@@ -6,13 +6,13 @@ import com.poc.trademanager.repository.AppUserRepository;
 import com.poc.trademanager.repository.UserFundEntitlementRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 
 @Component
-@Profile("!prod") // Only run this in non-production environments
 public class DataLoader implements CommandLineRunner {
 
     private final AppUserRepository appUserRepository;
@@ -44,7 +44,11 @@ public class DataLoader implements CommandLineRunner {
             entitlement2.setUser(user);
             entitlement2.setFundNumber("FUND-B");
 
-            userFundEntitlementRepository.saveAll(List.of(entitlement1, entitlement2));
+            UserFundEntitlement entitlement3 = new UserFundEntitlement();
+            entitlement3.setUser(user);
+            entitlement3.setFundNumber("FUND-ABC");
+
+            userFundEntitlementRepository.saveAll(List.of(entitlement1, entitlement2, entitlement3));
         }
 
         if (appUserRepository.findByUsername("supportuser").isEmpty()) {

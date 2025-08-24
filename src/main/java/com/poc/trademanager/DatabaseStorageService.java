@@ -1,8 +1,10 @@
 package com.poc.trademanager;
 
+import com.poc.trademanager.dto.FundTradeCount;
 import com.poc.trademanager.dto.JsonData;
 import com.poc.trademanager.dto.TradeDetailsDto;
 import com.poc.trademanager.dto.TradeExceptionData;
+import com.poc.trademanager.dto.TradeSummaryDto;
 import com.poc.trademanager.entity.JsonDoc;
 import com.poc.trademanager.entity.TradeDetail;
 import com.poc.trademanager.entity.TradeException;
@@ -28,8 +30,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -43,14 +47,16 @@ public class DatabaseStorageService {
     private final JsonDocRepository jsonDocRepository;
     private final TradeDetailRepository tradeDetailRepository;
     private final TradeExceptionRepository tradeExceptionRepository;
+    private final ObjectMapper objectMapper;
 
-    public DatabaseStorageService(AppUserRepository appUserRepository, UserFundEntitlementRepository userFundEntitlementRepository, UniqueIdGenerator uniqueIdGenerator, JsonDocRepository jsonDocRepository, TradeDetailRepository tradeDetailRepository, TradeExceptionRepository tradeExceptionRepository) {
+    public DatabaseStorageService(AppUserRepository appUserRepository, UserFundEntitlementRepository userFundEntitlementRepository, UniqueIdGenerator uniqueIdGenerator, JsonDocRepository jsonDocRepository, TradeDetailRepository tradeDetailRepository, TradeExceptionRepository tradeExceptionRepository, ObjectMapper objectMapper) {
         this.appUserRepository = appUserRepository;
         this.userFundEntitlementRepository = userFundEntitlementRepository;
         this.uniqueIdGenerator = uniqueIdGenerator;
         this.jsonDocRepository = jsonDocRepository;
         this.tradeDetailRepository = tradeDetailRepository;
         this.tradeExceptionRepository = tradeExceptionRepository;
+        this.objectMapper = objectMapper;
     }
 
     @Transactional
@@ -110,19 +116,53 @@ public class DatabaseStorageService {
         return getDataByDateRange(startDate, endDate, pageable);
     }
 
-    public List<TradeDetailsDto> getTradeDetailsByClientReferenceForUser(String clientReferenceNumber, String username) {
+    public List<TradeDetailsDto> getTradeDetailsForUser(String clientReferenceNumber, String username, LocalDate startDate, LocalDate endDate) {
         List<String> entitledFunds = getEntitledFundNumbers(username);
         if (entitledFunds.isEmpty()) {
             return Collections.emptyList();
         }
-        return tradeDetailRepository.findByClientReferenceNumberAndFundNumberIn(clientReferenceNumber, entitledFunds).stream()
+
+        List<TradeDetail> trades;
+        boolean hasClientRef = clientReferenceNumber != null && !clientReferenceNumber.trim().isEmpty();
+        boolean hasDateRange = startDate != null && endDate != null;
+
+        if (hasClientRef && hasDateRange) {
+            trades = tradeDetailRepository.findByClientReferenceNumberAndFundNumberInAndTradeDateBetween(clientReferenceNumber, entitledFunds, startDate, endDate);
+        } else if (hasClientRef) {
+            trades = tradeDetailRepository.findByClientReferenceNumberAndFundNumberIn(clientReferenceNumber, entitledFunds);
+        } else if (hasDateRange) {
+            trades = tradeDetailRepository.findByFundNumberInAndTradeDateBetween(entitledFunds, startDate, endDate);
+        } else {
+            // Should be prevented by controller, but as a safeguard:
+            trades = Collections.emptyList();
+        }
+
+        return trades.stream()
                 .map(this::convertToTradeDetailsDto)
                 .collect(Collectors.toList());
     }
 
-    public List<TradeExceptionData> getTradeExceptionsByClientReferenceForUser(String clientReferenceNumber, String username) {
-        log.warn("getTradeExceptionsByClientReferenceForUser is not filtering by fund entitlement. This is a design decision.");
-        return getTradeExceptionsByClientReference(clientReferenceNumber);
+    public List<TradeExceptionData> getTradeExceptionsForUser(String clientReferenceNumber, String username, LocalDateTime startDate, LocalDateTime endDate) {
+        log.warn("getTradeExceptionsForUser is not filtering by fund entitlement. This is a design decision.");
+
+        List<TradeException> exceptions;
+        boolean hasClientRef = clientReferenceNumber != null && !clientReferenceNumber.trim().isEmpty();
+        boolean hasDateRange = startDate != null && endDate != null;
+
+        if (hasClientRef && hasDateRange) {
+            exceptions = tradeExceptionRepository.findByClientReferenceNumberAndCreatedAtBetween(clientReferenceNumber, startDate, endDate);
+        } else if (hasClientRef) {
+            exceptions = tradeExceptionRepository.findByClientReferenceNumber(clientReferenceNumber);
+        } else if (hasDateRange) {
+            exceptions = tradeExceptionRepository.findByCreatedAtBetween(startDate, endDate);
+        } else {
+            // Should be prevented by controller, but as a safeguard:
+            exceptions = Collections.emptyList();
+        }
+
+        return exceptions.stream()
+                .map(this::convertToTradeExceptionData)
+                .collect(Collectors.toList());
     }
 
     private JsonData convertToJsonData(JsonDoc jsonDoc) {
@@ -152,5 +192,36 @@ public class DatabaseStorageService {
                 tradeException.getErrorType(),
                 tradeException.getCreatedAt()
         );
+    }
+
+    public List<TradeSummaryDto> getTradeSummary() {
+        List<FundTradeCount> createdCounts = tradeDetailRepository.countByFundNumber();
+        List<TradeException> exceptions = tradeExceptionRepository.findAll();
+
+        Map<String, Long> exceptionCounts = exceptions.stream()
+                .collect(Collectors.groupingBy(ex -> {
+                    try {
+                        Map<String, Object> tradeData = objectMapper.readValue(ex.getFailedTradeJson(), Map.class);
+                        return (String) tradeData.getOrDefault("fundNumber", "UNKNOWN");
+                    } catch (Exception e) {
+                        log.error("Error parsing failed trade JSON for exception ID {}: {}", ex.getId(), e.getMessage());
+                        return "UNKNOWN";
+                    }
+                }, Collectors.counting()));
+
+        Map<String, TradeSummaryDto> summaryMap = createdCounts.stream()
+                .collect(Collectors.toMap(
+                        FundTradeCount::getFundNumber,
+                        dto -> new TradeSummaryDto(dto.getFundNumber(), dto.getCount(), dto.getCount(), 0L)
+                ));
+
+        exceptionCounts.forEach((fundNumber, count) -> {
+            summaryMap.computeIfAbsent(fundNumber, fn -> new TradeSummaryDto(fn, 0L, 0L, 0L));
+            TradeSummaryDto summary = summaryMap.get(fundNumber);
+            summary.setExceptions(count);
+            summary.setTradesReceived(summary.getTradesCreated() + count);
+        });
+
+        return new ArrayList<>(summaryMap.values());
     }
 }
