@@ -109,7 +109,7 @@ public class MessageProcessingService {
         LocalDate today = LocalDate.now(ZoneOffset.UTC);
 
         if (tradeDetails.getTradeDate() != null) {
-            LocalDate tradeDate = tradeDetails.getTradeDate().toInstant().atZone(ZoneOffset.UTC).toLocalDate();
+            LocalDate tradeDate = tradeDetails.getTradeDate();
             if (!tradeDate.equals(today)) {
                 errors.add("Trade date (" + tradeDate + ") is not the current date (" + today + ").");
             }
@@ -118,7 +118,7 @@ public class MessageProcessingService {
         }
 
         if (tradeDetails.getSettleDate() != null) {
-            LocalDate settleDate = tradeDetails.getSettleDate().toInstant().atZone(ZoneOffset.UTC).toLocalDate();
+            LocalDate settleDate = tradeDetails.getSettleDate();
             if (!settleDate.isAfter(today)) {
                 errors.add("Settlement date (" + settleDate + ") is not in the future.");
             }

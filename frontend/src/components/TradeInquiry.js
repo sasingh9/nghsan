@@ -31,7 +31,7 @@ const TradeInquiry = () => {
             setError('Please enter a Client Reference Number or select a date range.');
             return;
         }
-        if (hasDateRange && new Date(startDate) >= new Date(endDate)) {
+        if (hasDateRange && startDate >= endDate) {
             setError('Start date must be before end date.');
             return;
         }
@@ -45,9 +45,8 @@ const TradeInquiry = () => {
                 params.append('clientReferenceNumber', clientRef);
             }
             if (hasDateRange) {
-                // Format to yyyy-MM-ddTHH:mm which the backend expects
-                params.append('startDate', new Date(startDate).toISOString().slice(0, 16));
-                params.append('endDate', new Date(endDate).toISOString().slice(0, 16));
+                params.append('startDate', startDate);
+                params.append('endDate', endDate);
             }
 
             const response = await fetch(`/api/trades?${params.toString()}`, {
@@ -88,7 +87,7 @@ const TradeInquiry = () => {
                 />
                 <TextField
                     label="Start Date"
-                    type="datetime-local"
+                    type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
                     InputLabelProps={{ shrink: true }}
@@ -96,7 +95,7 @@ const TradeInquiry = () => {
                 />
                 <TextField
                     label="End Date"
-                    type="datetime-local"
+                    type="date"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
                     InputLabelProps={{ shrink: true }}

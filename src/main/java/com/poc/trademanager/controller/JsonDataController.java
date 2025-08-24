@@ -32,6 +32,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -87,8 +88,8 @@ public class JsonDataController {
     @GetMapping("/trades")
     public ResponseEntity<ApiResponse<List<TradeDetailsDto>>> getTrades(
             @RequestParam(required = false) String clientReferenceNumber,
-            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm") LocalDateTime startDate,
-            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm") LocalDateTime endDate) {
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
 
         if (clientReferenceNumber == null && startDate == null && endDate == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "At least one search parameter (clientReferenceNumber, startDate, endDate) must be provided.");

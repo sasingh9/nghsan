@@ -10,8 +10,8 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Table;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Date;
 
 @Data
 @Entity
@@ -32,10 +32,10 @@ public class TradeDetail {
     private String securityId;
 
     @Column(name = "trade_date")
-    private Date tradeDate;
+    private LocalDate tradeDate;
 
     @Column(name = "settle_date")
-    private Date settleDate;
+    private LocalDate settleDate;
 
     private BigDecimal quantity;
 

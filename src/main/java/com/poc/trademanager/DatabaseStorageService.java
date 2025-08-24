@@ -116,7 +116,7 @@ public class DatabaseStorageService {
         return getDataByDateRange(startDate, endDate, pageable);
     }
 
-    public List<TradeDetailsDto> getTradeDetailsForUser(String clientReferenceNumber, String username, LocalDateTime startDate, LocalDateTime endDate) {
+    public List<TradeDetailsDto> getTradeDetailsForUser(String clientReferenceNumber, String username, LocalDate startDate, LocalDate endDate) {
         List<String> entitledFunds = getEntitledFundNumbers(username);
         if (entitledFunds.isEmpty()) {
             return Collections.emptyList();
