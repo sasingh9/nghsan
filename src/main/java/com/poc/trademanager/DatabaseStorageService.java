@@ -116,18 +116,31 @@ public class DatabaseStorageService {
         return getDataByDateRange(startDate, endDate, pageable);
     }
 
-    public List<TradeDetailsDto> getTradeDetailsByClientReferenceForUser(String clientReferenceNumber, String username) {
+    public List<TradeDetailsDto> getTradeDetailsByClientReferenceForUser(String clientReferenceNumber, String username, LocalDateTime startDate, LocalDateTime endDate) {
         List<String> entitledFunds = getEntitledFundNumbers(username);
         if (entitledFunds.isEmpty()) {
             return Collections.emptyList();
         }
-        return tradeDetailRepository.findByClientReferenceNumberAndFundNumberIn(clientReferenceNumber, entitledFunds).stream()
+
+        List<TradeDetail> trades;
+        if (startDate != null && endDate != null) {
+            trades = tradeDetailRepository.findByClientReferenceNumberAndFundNumberInAndTradeDateBetween(clientReferenceNumber, entitledFunds, startDate, endDate);
+        } else {
+            trades = tradeDetailRepository.findByClientReferenceNumberAndFundNumberIn(clientReferenceNumber, entitledFunds);
+        }
+
+        return trades.stream()
                 .map(this::convertToTradeDetailsDto)
                 .collect(Collectors.toList());
     }
 
-    public List<TradeExceptionData> getTradeExceptionsByClientReferenceForUser(String clientReferenceNumber, String username) {
+    public List<TradeExceptionData> getTradeExceptionsByClientReferenceForUser(String clientReferenceNumber, String username, LocalDateTime startDate, LocalDateTime endDate) {
         log.warn("getTradeExceptionsByClientReferenceForUser is not filtering by fund entitlement. This is a design decision.");
+        if (startDate != null && endDate != null) {
+            return tradeExceptionRepository.findByClientReferenceNumberAndCreatedAtBetween(clientReferenceNumber, startDate, endDate).stream()
+                    .map(this::convertToTradeExceptionData)
+                    .collect(Collectors.toList());
+        }
         return getTradeExceptionsByClientReference(clientReferenceNumber);
     }
 

@@ -16,6 +16,8 @@ const columns = [
 
 const TradeInquiry = () => {
     const [clientRef, setClientRef] = useState('');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
     const [trades, setTrades] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -29,7 +31,15 @@ const TradeInquiry = () => {
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch(`/api/trades/${clientRef}`, {
+            const params = new URLSearchParams();
+            if (startDate) {
+                params.append('startDate', new Date(startDate).toISOString());
+            }
+            if (endDate) {
+                params.append('endDate', new Date(endDate).toISOString());
+            }
+
+            const response = await fetch(`/api/trades/${clientRef}?${params.toString()}`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json'
@@ -52,12 +62,29 @@ const TradeInquiry = () => {
     return (
         <div>
             <Typography variant="h4" gutterBottom>Trade Inquiry</Typography>
-            <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', gap: 2, mb: 2 }}>
+            <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 2 }}>
                 <TextField
                     label="Client Reference Number"
                     value={clientRef}
                     onChange={(e) => setClientRef(e.target.value)}
                     variant="outlined"
+                    size="small"
+                    sx={{ minWidth: '240px' }}
+                />
+                <TextField
+                    label="Start Date"
+                    type="datetime-local"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    size="small"
+                />
+                <TextField
+                    label="End Date"
+                    type="datetime-local"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
                     size="small"
                 />
                 <Button type="submit" variant="contained">Search</Button>

@@ -15,9 +15,9 @@ public class WebConfig implements WebMvcConfigurer {
         this.headerValidationInterceptor = headerValidationInterceptor;
     }
 
-    // @Override
-    // public void addInterceptors(InterceptorRegistry registry) {
-    //     registry.addInterceptor(headerValidationInterceptor).addPathPatterns("/api/**")
-    //             .excludePathPatterns("/api/data");
-    // }
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+//        registry.addInterceptor(headerValidationInterceptor).addPathPatterns("/api/**")
+//                .excludePathPatterns("/api/data");
+    }
 }

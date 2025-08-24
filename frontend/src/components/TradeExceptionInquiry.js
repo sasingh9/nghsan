@@ -16,6 +16,8 @@ const style = {
 
 function TradeExceptionInquiry() {
     const [clientReference, setClientReference] = useState('');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
     const [exceptions, setExceptions] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -62,14 +64,19 @@ function TradeExceptionInquiry() {
         }
 
         try {
-            const headers = new Headers();
-            headers.append('X-Correlation-ID', 'jules-debug-session');
-            headers.append('X-Source-Application-ID', 'frontend');
-            headers.append('Authorization', 'Basic ' + btoa('user:password'));
+            const params = new URLSearchParams();
+            if (startDate) {
+                params.append('startDate', new Date(startDate).toISOString());
+            }
+            if (endDate) {
+                params.append('endDate', new Date(endDate).toISOString());
+            }
 
-            const response = await fetch(`/api/exceptions/${clientReference}`, {
+            const response = await fetch(`/api/exceptions/${clientReference}?${params.toString()}`, {
                 method: 'GET',
-                headers: headers,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
                 credentials: 'include'
             });
             const data = await response.json();
@@ -89,12 +96,29 @@ function TradeExceptionInquiry() {
     return (
         <div>
             <Typography variant="h4" gutterBottom>Trade Exception Inquiry</Typography>
-            <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', gap: 2, mb: 2 }}>
+            <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 2 }}>
                 <TextField
                     label="Client Reference Number"
                     value={clientReference}
                     onChange={(e) => setClientReference(e.target.value)}
                     variant="outlined"
+                    size="small"
+                    sx={{ minWidth: '240px' }}
+                />
+                <TextField
+                    label="Start Date"
+                    type="datetime-local"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    size="small"
+                />
+                <TextField
+                    label="End Date"
+                    type="datetime-local"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
                     size="small"
                 />
                 <Button type="submit" disabled={loading} variant="contained">

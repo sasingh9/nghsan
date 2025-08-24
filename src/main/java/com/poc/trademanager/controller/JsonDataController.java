@@ -85,10 +85,18 @@ public class JsonDataController {
     }
 
     @GetMapping("/trades/{clientReferenceNumber}")
-    public ResponseEntity<ApiResponse<List<TradeDetailsDto>>> getTradesByClientReference(@PathVariable String clientReferenceNumber) {
+    public ResponseEntity<ApiResponse<List<TradeDetailsDto>>> getTradesByClientReference(
+            @PathVariable String clientReferenceNumber,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
+
+        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Start date must be before end date.");
+        }
+
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
-        List<TradeDetailsDto> trades = storageService.getTradeDetailsByClientReferenceForUser(clientReferenceNumber, username);
+        List<TradeDetailsDto> trades = storageService.getTradeDetailsByClientReferenceForUser(clientReferenceNumber, username, startDate, endDate);
         return ResponseEntity.ok(new ApiResponse<>(true, "Trades retrieved successfully", trades));
     }
 
@@ -132,10 +140,18 @@ public class JsonDataController {
     }
 
     @GetMapping("/exceptions/{clientReferenceNumber}")
-    public ResponseEntity<ApiResponse<List<TradeExceptionData>>> getExceptionsByClientReference(@PathVariable String clientReferenceNumber) {
+    public ResponseEntity<ApiResponse<List<TradeExceptionData>>> getExceptionsByClientReference(
+            @PathVariable String clientReferenceNumber,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
+
+        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Start date must be before end date.");
+        }
+
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
-        List<TradeExceptionData> exceptions = storageService.getTradeExceptionsByClientReferenceForUser(clientReferenceNumber, username);
+        List<TradeExceptionData> exceptions = storageService.getTradeExceptionsByClientReferenceForUser(clientReferenceNumber, username, startDate, endDate);
         return ResponseEntity.ok(new ApiResponse<>(true, "Exceptions retrieved successfully", exceptions));
     }
 

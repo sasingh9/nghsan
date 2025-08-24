@@ -128,7 +128,7 @@ class JsonDataControllerTest {
         tradeDetailsDto.setClientReferenceNumber("CLIENT-001");
         List<TradeDetailsDto> tradeDetailsList = Collections.singletonList(tradeDetailsDto);
 
-        given(databaseStorageService.getTradeDetailsByClientReferenceForUser(anyString(), anyString())).willReturn(tradeDetailsList);
+        given(databaseStorageService.getTradeDetailsByClientReferenceForUser(anyString(), anyString(), any(), any())).willReturn(tradeDetailsList);
 
         // When & Then
         mockMvc.perform(get("/api/trades/CLIENT-001")
@@ -148,7 +148,7 @@ class JsonDataControllerTest {
         TradeExceptionData exceptionData = new TradeExceptionData(1L, "CLIENT-001", "{\"bad\":\"data\"}", "Invalid trade date", ErrorType.BUSINESS, now);
         List<TradeExceptionData> allExceptions = Collections.singletonList(exceptionData);
 
-        given(databaseStorageService.getTradeExceptionsByClientReferenceForUser(anyString(), anyString())).willReturn(allExceptions);
+        given(databaseStorageService.getTradeExceptionsByClientReferenceForUser(anyString(), anyString(), any(), any())).willReturn(allExceptions);
 
         // When & Then
         mockMvc.perform(get("/api/exceptions/CLIENT-001")
