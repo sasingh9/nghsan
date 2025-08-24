@@ -26,7 +26,7 @@ const drawerWidth = 240;
 const navItems = [
     { text: 'Summary', path: '/', icon: <BarChartIcon /> },
     { text: 'Fund Master', path: '/fund-master', icon: <AccountBalanceWalletIcon /> },
-    { text: 'JSON Data Viewer', path: '/json-data-viewer', icon: <AssessmentIcon /> },
+    { text: 'Inbound Message', path: '/inbound-message', icon: <AssessmentIcon /> },
     { text: 'Trade Inquiry', path: '/trade-inquiry', icon: <InboxIcon /> },
     { text: 'Trade Exceptions Inquiry', path: '/trade-exception-inquiry', icon: <MailIcon /> },
 ];
@@ -72,7 +72,7 @@ function App() {
                     <Routes>
                         <Route path="/" element={<SummaryPage />} />
                         <Route path="/fund-master" element={<FundMaster />} />
-                        <Route path="/json-data-viewer" element={<JsonDataViewer />} />
+                        <Route path="/inbound-message" element={<JsonDataViewer />} />
                         <Route path="/trade-inquiry" element={<TradeInquiry />} />
                         <Route path="/trade-exception-inquiry" element={<TradeExceptionInquiry />} />
                     </Routes>

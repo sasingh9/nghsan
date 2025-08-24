@@ -34,15 +34,15 @@ const TradeInquiry = () => {
         { field: 'netAmount', headerName: 'Net Amount', width: 120 },
         {
             field: 'actions',
-            headerName: '...',
-            width: 80,
+            headerName: 'Outbound',
+            width: 100,
             renderCell: (params) => (
                 <Button
                     variant="outlined"
                     size="small"
                     onClick={() => handleViewJson(params.row.outboundJson)}
                 >
-                    ...
+                    View
                 </Button>
             ),
         },

@@ -82,7 +82,7 @@ const JsonDataViewer = () => {
 
     return (
         <div>
-            <Typography variant="h4" gutterBottom>JSON Data Viewer</Typography>
+            <Typography variant="h4" gutterBottom>Inbound Message</Typography>
             <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
                 <TextField
                     label="Start Date"
