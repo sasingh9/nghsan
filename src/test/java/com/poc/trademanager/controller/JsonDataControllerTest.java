@@ -23,7 +23,6 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
@@ -31,6 +30,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -129,7 +129,7 @@ class JsonDataControllerTest {
         tradeDetailsDto.setClientReferenceNumber("CLIENT-001");
         List<TradeDetailsDto> tradeDetailsList = Collections.singletonList(tradeDetailsDto);
 
-        given(databaseStorageService.getTradeDetails(anyString(), any(Date.class), any(Date.class))).willReturn(tradeDetailsList);
+        given(databaseStorageService.getTradeDetailsForUser(eq("CLIENT-001"), eq("test-user"), any(), any())).willReturn(tradeDetailsList);
 
         // When & Then
         mockMvc.perform(get("/api/trades")
@@ -150,7 +150,7 @@ class JsonDataControllerTest {
         TradeExceptionData exceptionData = new TradeExceptionData(1L, "CLIENT-001", "{\"bad\":\"data\"}", "Invalid trade date", ErrorType.BUSINESS, now);
         List<TradeExceptionData> allExceptions = Collections.singletonList(exceptionData);
 
-        given(databaseStorageService.getTradeExceptions(anyString(), any(Date.class), any(Date.class))).willReturn(allExceptions);
+        given(databaseStorageService.getTradeExceptionsForUser(eq("CLIENT-001"), eq("test-user"), any(), any())).willReturn(allExceptions);
 
         // When & Then
         mockMvc.perform(get("/api/exceptions")
