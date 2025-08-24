@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { DataGrid } from '@mui/x-data-grid';
 import { Button, TextField, Typography, Box, Modal, Paper } from '@mui/material';
-import JsonDataViewer from './JsonDataViewer';
 
 const TradeInquiry = () => {
     const [clientRef, setClientRef] = useState('');
@@ -160,7 +159,9 @@ const TradeInquiry = () => {
                     <Typography id="json-viewer-modal-title" variant="h6" component="h2" gutterBottom>
                         Outbound JSON Message
                     </Typography>
-                    <JsonDataViewer data={selectedJson} />
+                    <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+                        {selectedJson ? JSON.stringify(JSON.parse(selectedJson), null, 2) : 'No JSON data available.'}
+                    </pre>
                     <Button onClick={handleCloseModal} sx={{ mt: 2 }}>Close</Button>
                 </Paper>
             </Modal>
