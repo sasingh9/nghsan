@@ -180,6 +180,7 @@ public class DatabaseStorageService {
         dto.setPrice(tradeDetail.getPrice());
         dto.setPrincipal(tradeDetail.getPrincipal());
         dto.setNetAmount(tradeDetail.getNetAmount());
+        dto.setOutboundJson(tradeDetail.getOutboundJson());
         return dto;
     }
 

@@ -91,10 +91,11 @@ public class MessageProcessingService {
                 tradeDetail.setPrice(tradeDetailsDto.getPrice());
                 tradeDetail.setPrincipal(tradeDetailsDto.getPrincipal());
                 tradeDetail.setNetAmount(tradeDetailsDto.getNetAmount());
+                String tradeDetailsJson = objectMapper.writeValueAsString(tradeDetailsDto);
+                tradeDetail.setOutboundJson(tradeDetailsJson);
                 tradeDetailRepository.save(tradeDetail);
                 log.info("Successfully extracted and saved trade details for client reference: {}", tradeDetail.getClientReferenceNumber());
 
-                String tradeDetailsJson = objectMapper.writeValueAsString(tradeDetailsDto);
                 kafkaTemplate.send(outputTopic, tradeDetailsJson);
                 log.info("Successfully published trade details to Kafka topic {}: {}", outputTopic, tradeDetailsJson);
             } else {
