@@ -150,12 +150,12 @@ const TradeInquiry = () => {
 
             {error && <Typography color="error">{error}</Typography>}
 
-            <div style={{ height: 600, width: '100%' }}>
+            <div style={{ height: 400, width: '100%' }}>
                 <DataGrid
                     rows={trades}
                     columns={columns}
-                    pageSize={10}
-                    rowsPerPageOptions={[10]}
+                    pageSize={5}
+                    rowsPerPageOptions={[5]}
                     loading={loading}
                     getRowId={(row) => row.id}
                     slots={{
@@ -167,7 +167,7 @@ const TradeInquiry = () => {
                     }}
                 />
             </div>
-            <Box sx={{ mt: 2 }}>
+            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
                 <Button variant="contained" onClick={handleExport}>Export to Excel</Button>
             </Box>
 
