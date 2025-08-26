@@ -37,7 +37,8 @@ class DatabaseStorageServiceTest {
 
     @BeforeEach
     void setUp() {
-        UniqueIdGenerator uniqueIdGenerator = new UniqueIdGenerator("test-server");
+        UniqueIdGenerator uniqueIdGenerator = new UniqueIdGenerator();
+        uniqueIdGenerator.init();
         ObjectMapper objectMapper = new ObjectMapper();
         databaseStorageService = new DatabaseStorageService(
                 appUserRepository,
