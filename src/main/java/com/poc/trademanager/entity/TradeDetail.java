@@ -51,7 +51,6 @@ public class TradeDetail {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Lob
-    @Column(name = "outbound_json")
+    @Column(name = "outbound_json", columnDefinition = "TEXT")
     private String outboundJson;
 }

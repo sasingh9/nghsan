@@ -24,8 +24,7 @@ public class JsonDoc {
     @Column(name = "message_key", unique = true, nullable = false)
     private String messageKey;
 
-    @Lob
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String data;
 
     @CreationTimestamp
