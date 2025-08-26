@@ -20,7 +20,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 @TestPropertySource(properties = {
         "app.kafka.topic.json-input=test-input-topic",
         "app.kafka.topic.json-output=test-output-topic",
-        "spring.kafka.consumer.group-id=test-group"
+        "spring.kafka.consumer.group-id=test-group",
+        "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration"
 })
 class DatabaseStorageServiceTest {
 
