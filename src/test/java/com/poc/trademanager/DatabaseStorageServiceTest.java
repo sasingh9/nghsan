@@ -1,41 +1,56 @@
 package com.poc.trademanager;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.poc.trademanager.entity.JsonDoc;
+import com.poc.trademanager.repository.AppUserRepository;
 import com.poc.trademanager.repository.JsonDocRepository;
+import com.poc.trademanager.repository.TradeDetailRepository;
+import com.poc.trademanager.repository.TradeExceptionRepository;
+import com.poc.trademanager.repository.UserFundEntitlementRepository;
+import com.poc.trademanager.service.UniqueIdGenerator;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.AutoConfigureTestEntityManager;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
-
-import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest
-@AutoConfigureTestEntityManager
-@ActiveProfiles("test")
-@TestPropertySource(properties = {
-        "app.kafka.topic.json-input=test-input-topic",
-        "app.kafka.topic.json-output=test-output-topic",
-        "spring.kafka.consumer.group-id=test-group",
-        "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration"
-})
+@DataJpaTest
 class DatabaseStorageServiceTest {
-
-    @Autowired
-    private DatabaseStorageService databaseStorageService;
 
     @Autowired
     private TestEntityManager entityManager;
 
     @Autowired
     private JsonDocRepository jsonDocRepository;
+    @Autowired
+    private AppUserRepository appUserRepository;
+    @Autowired
+    private UserFundEntitlementRepository userFundEntitlementRepository;
+    @Autowired
+    private TradeDetailRepository tradeDetailRepository;
+    @Autowired
+    private TradeExceptionRepository tradeExceptionRepository;
+
+    private DatabaseStorageService databaseStorageService;
+
+    @BeforeEach
+    void setUp() {
+        UniqueIdGenerator uniqueIdGenerator = new UniqueIdGenerator("test-server");
+        ObjectMapper objectMapper = new ObjectMapper();
+        databaseStorageService = new DatabaseStorageService(
+                appUserRepository,
+                userFundEntitlementRepository,
+                uniqueIdGenerator,
+                jsonDocRepository,
+                tradeDetailRepository,
+                tradeExceptionRepository,
+                objectMapper
+        );
+    }
 
     @Test
-    @Transactional
     void testSaveRawMessage() {
         // Given
         String jsonMessage = "{\"test_key\":\"test_value\"}";
