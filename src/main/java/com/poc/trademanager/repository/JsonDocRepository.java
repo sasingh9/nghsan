@@ -13,10 +13,11 @@ import java.time.LocalDateTime;
 
 @Repository
 public interface JsonDocRepository extends JpaRepository<JsonDoc, Long> {
+
     @Query("SELECT j FROM JsonDoc j WHERE " +
-            "(:startDate IS NULL OR j.createdAt >= :startDate) AND " +
-            "(:endDate IS NULL OR j.createdAt <= :endDate) AND " +
-            "(:contentFilter IS NULL OR j.data LIKE %:contentFilter%)")
+            "(CAST(:startDate as timestamp) IS NULL OR j.createdAt >= :startDate) AND " +
+            "(CAST(:endDate as timestamp) IS NULL OR j.createdAt <= :endDate) AND " +
+            "(:contentFilter IS NULL OR j.data LIKE CONCAT('%', :contentFilter, '%'))")
     Page<JsonDoc> findByCriteria(
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate,
