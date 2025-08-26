@@ -2,6 +2,7 @@ package com.poc.trademanager.entity;
 
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.Type;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -51,6 +52,7 @@ public class TradeDetail {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "outbound_json", columnDefinition = "TEXT")
+    @Type(type = "org.hibernate.type.TextType")
+    @Column(name = "outbound_json")
     private String outboundJson;
 }

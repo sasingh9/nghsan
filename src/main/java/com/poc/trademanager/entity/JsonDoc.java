@@ -2,6 +2,7 @@ package com.poc.trademanager.entity;
 
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.Type;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -24,7 +25,8 @@ public class JsonDoc {
     @Column(name = "message_key", unique = true, nullable = false)
     private String messageKey;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Type(type = "org.hibernate.type.TextType")
+    @Column(nullable = false)
     private String data;
 
     @CreationTimestamp
