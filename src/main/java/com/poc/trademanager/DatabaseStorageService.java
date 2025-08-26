@@ -76,6 +76,7 @@ public class DatabaseStorageService {
         return jsonDocRepository.save(jsonDoc);
     }
 
+    @Transactional(readOnly = true)
     public Page<JsonData> getDataByDateRange(LocalDate startDate, LocalDate endDate, String contentFilter, Pageable pageable) {
         LocalDateTime startDateTime = startDate != null ? startDate.atStartOfDay() : null;
         LocalDateTime endDateTime = endDate != null ? endDate.plusDays(1).atStartOfDay() : null;
@@ -84,18 +85,21 @@ public class DatabaseStorageService {
                 .map(this::convertToJsonData);
     }
 
+    @Transactional(readOnly = true)
     public List<TradeDetailsDto> getTradeDetailsByClientReference(String clientReferenceNumber) {
         return tradeDetailRepository.findByClientReferenceNumber(clientReferenceNumber).stream()
                 .map(this::convertToTradeDetailsDto)
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<TradeExceptionData> getTradeExceptionsByClientReference(String clientReferenceNumber) {
         return tradeExceptionRepository.findByClientReferenceNumber(clientReferenceNumber).stream()
                 .map(this::convertToTradeExceptionData)
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     private List<String> getEntitledFundNumbers(String username) {
         return appUserRepository.findByUsername(username)
                 .map(user -> userFundEntitlementRepository.findByUser(user).stream()
@@ -104,11 +108,13 @@ public class DatabaseStorageService {
                 .orElse(Collections.emptyList());
     }
 
+    @Transactional(readOnly = true)
     public Page<JsonData> getDataByDateRangeForUser(LocalDate startDate, LocalDate endDate, String username, String contentFilter, Pageable pageable) {
         log.warn("getDataByDateRangeForUser is not filtering by fund entitlement as json_docs has no fund_number. Returning all data.");
         return getDataByDateRange(startDate, endDate, contentFilter, pageable);
     }
 
+    @Transactional(readOnly = true)
     public List<TradeDetailsDto> getTradeDetailsForUser(String clientReferenceNumber, String username, LocalDate startDate, LocalDate endDate) {
         List<String> entitledFunds = getEntitledFundNumbers(username);
         if (entitledFunds.isEmpty()) {
@@ -135,6 +141,7 @@ public class DatabaseStorageService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<TradeExceptionData> getTradeExceptionsForUser(String clientReferenceNumber, String username, LocalDateTime startDate, LocalDateTime endDate) {
         log.warn("getTradeExceptionsForUser is not filtering by fund entitlement. This is a design decision.");
 
@@ -188,6 +195,7 @@ public class DatabaseStorageService {
         );
     }
 
+    @Transactional(readOnly = true)
     public List<TradeSummaryDto> getTradeSummary() {
         List<FundTradeCount> createdCounts = tradeDetailRepository.countByFundNumber();
         List<TradeException> exceptions = tradeExceptionRepository.findAll();
