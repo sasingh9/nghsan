@@ -1,0 +1,19 @@
+steps:
+# Step 1: Build the Spring Boot application using Maven
+# This will compile the code and create the JAR file in the target/ directory.
+- name: 'maven:3.8.5-openjdk-11'
+  entrypoint: 'mvn'
+  args: ['package', '-DskipTests']
+
+# Step 2: Build the Docker image using the Dockerfile
+# This step will now find the JAR file created in the previous step.
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-t', 'gcr.io/$PROJECT_ID/trade-manager', '.']
+
+# Step 3: Push the container image to Google Container Registry
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['push', 'gcr.io/$PROJECT_ID/trade-manager']
+
+# Specify the image to be pushed
+images:
+- 'gcr.io/$PROJECT_ID/trade-manager'
