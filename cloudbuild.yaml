@@ -17,3 +17,7 @@ steps:
 # Specify the image to be pushed
 images:
 - 'gcr.io/$PROJECT_ID/trade-manager'
+
+# Configure logging to use Google Cloud Logging
+options:
+  logging: CLOUD_LOGGING_ONLY
