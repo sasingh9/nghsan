@@ -1,14 +1,20 @@
-# Use an official OpenJDK 11 runtime as a parent image, as specified in pom.xml
+# --- Build Stage ---
+# Use a Maven image with OpenJDK 11 to build the application
+FROM maven:3.8.5-openjdk-11 AS build
+WORKDIR /workspace
+# Copy pom.xml first to leverage Docker cache for dependencies
+COPY pom.xml .
+RUN mvn dependency:go-offline
+# Copy the rest of the source code
+COPY src ./src
+# Package the application
+RUN mvn package -DskipTests
+
+# --- Runtime Stage ---
+# Use a slim JRE for a smaller final image
 FROM openjdk:11-jre-slim
-
-# Set the working directory in the container
 WORKDIR /app
-
-# Copy the executable JAR file from the target directory into the container
-COPY target/trade-manager-0.0.1-SNAPSHOT.jar app.jar
-
-# Expose port 8080 to allow communication with the application
+# Copy the built JAR from the build stage
+COPY --from=build /workspace/target/trade-manager-0.0.1-SNAPSHOT.jar app.jar
 EXPOSE 8080
-
-# Run the application when the container launches
 ENTRYPOINT ["java","-jar","app.jar"]
